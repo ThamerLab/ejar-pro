@@ -110,6 +110,14 @@ def payment_to_dict(p: Payment) -> dict:
 async def root(request: Request):
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
+@app.get("/demo-terms", response_class=HTMLResponse)
+async def demo_terms_page():
+    return FileResponse(os.path.join(FRONTEND_DIR, "demo-terms.html"))
+
+@app.get("/demo", response_class=HTMLResponse)
+async def demo_page():
+    return FileResponse(os.path.join(FRONTEND_DIR, "demo.html"))
+
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     token = request.cookies.get(COOKIE_NAME)
@@ -123,6 +131,14 @@ async def login_page(request: Request):
 @app.get("/app", response_class=HTMLResponse)
 async def app_page(user: User = Depends(get_current_user)):
     return FileResponse(os.path.join(FRONTEND_DIR, "app.html"))
+
+@app.get("/demo", response_class=HTMLResponse)
+async def demo_page():
+    return FileResponse(os.path.join(FRONTEND_DIR, "demo.html"))
+
+@app.get("/demo-app", response_class=HTMLResponse)
+async def demo_app_page():
+    return FileResponse(os.path.join(FRONTEND_DIR, "demo-app.html"))
 
 @app.post("/api/auth/login")
 async def login(
