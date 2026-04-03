@@ -554,4 +554,5 @@ def export_data(db: Session = Depends(get_db), _=Depends(get_current_user)):
     return JSONResponse(data, headers={"Content-Disposition": f"attachment; filename=ejar_backup_{today()}.json"})
 
 # ── Static files (last, catch-all) ───────────────────────────────────────────
+os.makedirs(STATIC_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
