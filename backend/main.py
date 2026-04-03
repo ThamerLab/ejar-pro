@@ -108,6 +108,10 @@ def payment_to_dict(p: Payment) -> dict:
 # ── Auth routes ───────────────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
     token = request.cookies.get(COOKIE_NAME)
     if token:
         from .auth import decode_session_cookie
