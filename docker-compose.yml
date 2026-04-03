@@ -1,0 +1,23 @@
+services:
+  ejar-pro:
+    build: .
+    container_name: ejar-pro
+    ports:
+      - "8000:8000"
+    volumes:
+      - ejar_data:/data
+    environment:
+      - DB_PATH=/data/ejar.db
+      - SECRET_KEY=change-this-to-a-random-secret
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin123
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  ejar_data:
+    driver: local
