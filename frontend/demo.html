@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إيجار Pro — وضع التجربة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f8fafc;--bg2:#f1f5f9;--txt:#0f172a;--txt2:#334155;--txt3:#64748b;--border:#e2e8f0;--blue:#3b82f6;--sidebar-w:240px}
+@media(prefers-color-scheme:dark){:root{--bg:#0f172a;--bg2:#1e293b;--txt:#f1f5f9;--txt2:#cbd5e1;--txt3:#94a3b8;--border:#334155}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Tajawal",sans-serif;background:var(--bg);color:var(--txt);direction:rtl;display:flex;height:100dvh;overflow:hidden;flex-direction:column}
+#sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100%;overflow:hidden;transition:transform .25s}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+@media(max-width:700px){#sidebar{position:fixed;right:0;top:0;z-index:100;transform:translateX(100%)}#sidebar.open{transform:translateX(0)}}
+#shell{flex:1;display:flex;overflow:hidden;min-width:0}
+#app-shell{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.demo-banner{background:linear-gradient(135deg,#d4a843,#f0c96a);color:#0f172a;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;flex-shrink:0}
+.demo-banner a{color:#0f172a;font-weight:900;text-decoration:none;padding:5px 14px;background:rgba(0,0,0,.15);border-radius:6px;transition:background .2s}
+.demo-banner a:hover{background:rgba(0,0,0,.25)}
+#topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px}
+#menu-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--txt)}
+@media(min-width:701px){#menu-btn{display:none}}
+#page-title{font-weight:700;font-size:16px;flex:1}
+#main-content{flex:1;overflow-y:auto;padding:16px}
+.nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 16px;border:none;background:none;color:var(--txt2);font-size:14px;cursor:pointer;text-align:right;transition:background .15s}
+.nav-item:hover{background:var(--border)}
+.nav-active{background:var(--blue)!important;color:#fff!important}
+.card{background:var(--bg2);border-radius:12px;padding:14px 16px;border:1px solid var(--border)}
+.mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}.mt-12{margin-top:12px}
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center}
+.kpi-val{font-size:22px;font-weight:800}.kpi-label{font-size:11px;color:var(--txt3);margin-top:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-family:"Tajawal",sans-serif;font-weight:500;text-decoration:none;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn-primary{background:var(--blue);color:#fff}.btn-outline{background:var(--bg);color:var(--txt2);border:1px solid var(--border)}
+.btn-wa{background:#25d366;color:#fff}
+.input-field{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--txt);font-size:14px;font-family:"Tajawal",sans-serif;direction:rtl}
+.input-field:focus{outline:2px solid var(--blue);border-color:transparent}
+</style>
+</head>
+<body>
+<div class="demo-banner">
+  <span>&#128640; وضع التجربة — البيانات وهمية وتنتهي بإغلاق المتصفح</span>
+  <a href="https://wa.me/966502700022?text=%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%20%D9%81%D9%8A%20%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1%20Pro" target="_blank">اشترِ النظام &#8592;</a>
+</div>
+<div id="shell">
+  <div id="sidebar-overlay"></div>
+  <div id="sidebar"></div>
+  <div id="app-shell">
+    <div id="topbar">
+      <button id="menu-btn">&#9776;</button>
+      <span id="page-title">المتابعة اليومية</span>
+      <span style="font-size:11px;color:var(--txt3);padding:3px 10px;border:1px solid var(--border);border-radius:100px">تجربة</span>
+    </div>
+    <div id="main-content"><div style="text-align:center;padding:40px;color:var(--txt3)">&#9203; جاري تحميل بيانات التجربة...</div></div>
+  </div>
+</div>
+<script>
+
+if (!sessionStorage.getItem('ejar_demo')) { window.location.href = '/demo-terms'; }
+
+const DEMO_DATA = {
+  properties: [
+    {id:'P001',name:'برج النجد',city:'الرياض',address:'طريق الملك فهد',type:'commercial'},
+    {id:'P002',name:'مجمع الواحة',city:'جدة',address:'حي الروضة',type:'residential'},
+    {id:'P003',name:'أبراج الغدير',city:'الدمام',address:'الكورنيش',type:'mixed'},
+  ],
+  units: [
+    {id:'U001',property_id:'P001',number:'101',floor:1,type:'office',area_m2:120,deleted:false},
+    {id:'U002',property_id:'P001',number:'102',floor:1,type:'office',area_m2:95,deleted:false},
+    {id:'U003',property_id:'P002',number:'A1',floor:0,type:'apartment',area_m2:140,deleted:false},
+    {id:'U004',property_id:'P002',number:'A2',floor:0,type:'apartment',area_m2:140,deleted:false},
+    {id:'U005',property_id:'P003',number:'301',floor:3,type:'retail',area_m2:60,deleted:false},
+  ],
+  tenants: [
+    {id:'T001',name:'محمد الرشيدي',phone:'0501234567',deleted:false},
+    {id:'T002',name:'شركة الفجر للتجارة',phone:'0556789012',deleted:false},
+    {id:'T003',name:'سارة القحطاني',phone:'0509876543',deleted:false},
+    {id:'T004',name:'أحمد العتيبي',phone:'0551122334',deleted:false},
+    {id:'T005',name:'مؤسسة النور',phone:'0504455667',deleted:false},
+  ],
+  contracts: [
+    {id:'C001',unit_id:'U001',tenant_id:'T001',ejar_number:'EJR-2024-00881',start_date:'2024-01-01',end_date:'2024-12-31',annual_rent:36000,installments:12,status:'active',archived:false,deleted:false},
+    {id:'C002',unit_id:'U002',tenant_id:'T002',ejar_number:'EJR-2024-00912',start_date:'2024-03-01',end_date:'2025-02-28',annual_rent:60000,installments:4,status:'active',archived:false,deleted:false},
+    {id:'C003',unit_id:'U003',tenant_id:'T003',ejar_number:'EJR-2024-01050',start_date:'2024-06-01',end_date:'2025-05-31',annual_rent:48000,installments:12,status:'active',archived:false,deleted:false},
+    {id:'C004',unit_id:'U004',tenant_id:'T004',ejar_number:'EJR-2024-01200',start_date:'2024-09-01',end_date:'2025-08-31',annual_rent:72000,installments:4,status:'active',archived:false,deleted:false},
+    {id:'C005',unit_id:'U005',tenant_id:'T005',ejar_number:'EJR-2024-01331',start_date:'2024-10-01',end_date:'2025-09-30',annual_rent:30000,installments:12,status:'active',archived:false,deleted:false},
+  ],
+  payments: [
+    {id:'PAY001',contract_id:'C001',due_date:'2024-09-01',amount_due:3000,amount_paid:3000,paid_date:'2024-09-02',status:'paid',receipt_number:'RV-2024-001',deleted:false},
+    {id:'PAY002',contract_id:'C001',due_date:'2024-10-01',amount_due:3000,amount_paid:3000,paid_date:'2024-10-01',status:'paid',receipt_number:'RV-2024-002',deleted:false},
+    {id:'PAY003',contract_id:'C001',due_date:'2024-11-01',amount_due:3000,amount_paid:1500,paid_date:'2024-11-10',status:'partial',receipt_number:'RV-2024-003',deleted:false},
+    {id:'PAY004',contract_id:'C001',due_date:'2024-12-01',amount_due:3000,amount_paid:0,paid_date:null,status:'overdue',receipt_number:null,deleted:false},
+    {id:'PAY005',contract_id:'C002',due_date:'2024-09-01',amount_due:15000,amount_paid:15000,paid_date:'2024-09-01',status:'paid',receipt_number:'RV-2024-004',deleted:false},
+    {id:'PAY006',contract_id:'C002',due_date:'2024-12-01',amount_due:15000,amount_paid:0,paid_date:null,status:'overdue',receipt_number:null,deleted:false},
+    {id:'PAY007',contract_id:'C003',due_date:'2024-11-01',amount_due:4000,amount_paid:2000,paid_date:'2024-11-15',status:'partial',receipt_number:'RV-2024-005',deleted:false},
+    {id:'PAY008',contract_id:'C003',due_date:'2024-12-01',amount_due:4000,amount_paid:0,paid_date:null,status:'overdue',receipt_number:null,deleted:false},
+    {id:'PAY009',contract_id:'C004',due_date:'2024-12-01',amount_due:18000,amount_paid:0,paid_date:null,status:'overdue',receipt_number:null,deleted:false},
+    {id:'PAY010',contract_id:'C005',due_date:'2024-11-01',amount_due:2500,amount_paid:2500,paid_date:'2024-11-03',status:'paid',receipt_number:'RV-2024-006',deleted:false},
+    {id:'PAY011',contract_id:'C005',due_date:'2024-12-01',amount_due:2500,amount_paid:0,paid_date:null,status:'overdue',receipt_number:null,deleted:false},
+  ],
+  templates: {
+    reminder: 'مرحباً {{tenant_name}}،\n\nنودّ تذكيركم بأن دفعة الإيجار المستحقة على وحدة {{unit_number}} في {{property_name}} لم يتم سدادها بعد.\n\nإجمالي المبلغ المستحق: {{total_overdue}}\nعدد أيام التأخير: {{overdue_days}} يوم\nرقم العقد: {{contract_number}}\n\nمع تحيات الإدارة',
+    escalation: 'تنبيه هام — {{tenant_name}}\n\nلا يزال مبلغ الإيجار على وحدة {{unit_number}} في {{property_name}} غير مسدد.\n\nإجمالي المتأخر: {{total_overdue}}\nأيام التأخير: {{overdue_days}}\n\nيرجى التواصل فوراً.',
+    receipt: 'إيصال دفعة — {{property_name}}\n\nعزيزي {{tenant_name}},\n\nتم استلام دفعتكم.\nرقم الإيصال: {{receipt_number}}\nالمبلغ: {{amount_paid}}\nالتاريخ: {{paid_date}}\n\nشكراً لكم.',
+  },
+  followup_log: [],
+  receipt_seq: 8,
+};
+
+function loadState(){try{const r=sessionStorage.getItem('ejar_demo_state');if(r)return JSON.parse(r);}catch(e){}return JSON.parse(JSON.stringify(DEMO_DATA));}
+function saveState(s){sessionStorage.setItem('ejar_demo_state',JSON.stringify(s));}
+let S=loadState();
+
+function today(){return new Date().toISOString().slice(0,10);}
+function fmt(n){return Number(n||0).toLocaleString('en-SA');}
+function daysDiff(a,b){return Math.floor((new Date(b)-new Date(a))/86400000);}
+function isOverdue(p){if(p.deleted||p.status==='paid')return false;if((p.amount_due-(p.amount_paid||0))<=0)return false;return daysDiff(p.due_date,today())>=1;}
+function overdueDays(p){return isOverdue(p)?daysDiff(p.due_date,today()):0;}
+function overdueSeverity(d){return d<=7?'low':d<=30?'medium':'high';}
+function getOverdue(){return S.payments.filter(p=>!p.deleted&&isOverdue(p));}
+function lookupT(id){return S.tenants.find(t=>t.id===id);}
+function lookupU(id){return S.units.find(u=>u.id===id);}
+function lookupP(id){return S.properties.find(p=>p.id===id);}
+function lookupC(id){return S.contracts.find(c=>c.id===id);}
+function lookupPay(id){return S.payments.find(p=>p.id===id);}
+function getContractOverdue(cid){
+  const ps=S.payments.filter(p=>!p.deleted&&p.contract_id===cid&&isOverdue(p));
+  return{payments:ps,total:ps.reduce((s,p)=>s+(p.amount_due-(p.amount_paid||0)),0),maxDays:ps.reduce((mx,p)=>Math.max(mx,overdueDays(p)),0)};
+}
+function getContractPayments(cid){return S.payments.filter(p=>p.contract_id===cid&&!p.deleted);}
+function applyTemplate(tpl,vars){return tpl.replace(/\{\{(\w+)\}\}/g,(_,k)=>vars[k]!==undefined?vars[k]:`{{${k}}}`);}
+function buildVars(c,t,u,prop,oi){
+  const list=oi.payments.map(p=>`• ${p.due_date} — ${fmt(p.amount_due-(p.amount_paid||0))} ر.س`).join('\n');
+  return{tenant_name:t?.name||'',property_name:prop?.name||'',unit_number:u?.number||'',contract_number:c.id,ejar_number:c.ejar_number||'',total_overdue:fmt(oi.total)+' ر.س',overdue_days:String(oi.maxDays),oldest_due:'',installments_list:list};
+}
+
+const navItems=[
+  {id:'daily_followup',icon:'📥',label:'المتابعة'},
+  {id:'dashboard',icon:'📊',label:'الرئيسية'},
+  {id:'overdue',icon:'🔴',label:'المتأخرات'},
+  {id:'contracts',icon:'📋',label:'العقود'},
+  {id:'payments',icon:'💰',label:'الدفعات'},
+  {id:'properties',icon:'🏢',label:'العقارات'},
+  {id:'tenants',icon:'👤',label:'المستأجرون'},
+  {id:'reports',icon:'📈',label:'التقارير'},
+  {id:'templates',icon:'✉️',label:'القوالب'},
+];
+const titles={daily_followup:'المتابعة اليومية',dashboard:'الرئيسية',overdue:'المتأخرات',contracts:'العقود',payments:'الدفعات',properties:'العقارات',tenants:'المستأجرون',reports:'التقارير',templates:'قوالب الرسائل',contract_detail:'تفاصيل العقد'};
+let currentPage='daily_followup';
+
+function renderNav(){
+  const ov=getOverdue().length;
+  document.getElementById('sidebar').innerHTML=`
+  <div style="padding:16px;border-bottom:1px solid var(--border)">
+    <div style="font-weight:800;font-size:18px;color:var(--blue)">إيجار Pro</div>
+    <div style="font-size:10px;color:#f97316;margin-top:2px;font-weight:700">⚡ وضع التجربة</div>
+  </div>
+  <nav style="flex:1;overflow-y:auto;padding:8px 0">
+    ${navItems.map(n=>`<button class="nav-item${currentPage===n.id?' nav-active':''}" data-page="${n.id}">
+      <span style="font-size:18px">${n.icon}</span>
+      <span style="flex:1">${n.label}</span>
+      ${(n.id==='daily_followup'||n.id==='overdue')&&ov>0?`<span style="background:#ef4444;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px">${ov}</span>`:''}
+    </button>`).join('')}
+  </nav>
+  <div style="padding:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px">
+    <a href="https://wa.me/966502700022?text=%D8%A3%D8%B1%D9%8A%D8%AF%20%D8%A7%D9%84%D8%A7%D8%B4%D8%AA%D8%B1%D8%A7%D9%83%20%D9%81%D9%8A%20%D8%A5%D9%8A%D8%AC%D8%A7%D8%B1%20Pro" target="_blank" class="btn btn-wa" style="text-align:center;text-decoration:none;font-size:13px">📲 اشترِ النظام الكامل</a>
+    <button class="btn btn-outline" style="font-size:12px" onclick="if(confirm('إنهاء التجربة؟')){sessionStorage.clear();location.href='/'}">🚪 إنهاء التجربة</button>
+  </div>`;
+  document.getElementById('sidebar').querySelectorAll('.nav-item').forEach(btn=>{
+    btn.addEventListener('click',()=>{closeSidebar();navigate(btn.dataset.page);});
+  });
+}
+
+function navigate(page,params={}){
+  currentPage=page;
+  document.getElementById('page-title').textContent=titles[page]||page;
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('nav-active',el.dataset.page===page));
+  renderNav();
+  let html='';
+  switch(page){
+    case 'daily_followup':html=renderDailyFollowup();break;
+    case 'dashboard':html=renderDashboard();break;
+    case 'overdue':html=renderOverdue();break;
+    case 'properties':html=renderProperties();break;
+    case 'tenants':html=renderTenants();break;
+    case 'contracts':html=renderContracts();break;
+    case 'contract_detail':html=renderContractDetail(params.contract_id);break;
+    case 'payments':html=renderPayments();break;
+    case 'reports':html=renderReports();break;
+    case 'templates':html=renderTemplates();break;
+    default:html=`<div class="card">صفحة غير موجودة</div>`;
+  }
+  document.getElementById('main-content').innerHTML=html;
+  bindActions();
+}
+
+function renderDailyFollowup(){
+  const ov=getOverdue();
+  if(!ov.length)return`<div class="card" style="text-align:center;padding:40px"><div style="font-size:48px">✅</div><div style="font-weight:600;margin-top:12px">لا توجد دفعات متأخرة</div></div>`;
+  const byC={};
+  ov.forEach(p=>{if(!byC[p.contract_id])byC[p.contract_id]=[];byC[p.contract_id].push(p);});
+  const cids=Object.keys(byC).sort((a,b)=>Math.max(...byC[b].map(overdueDays))-Math.max(...byC[a].map(overdueDays)));
+  const sc={high:'#ef4444',medium:'#f97316',low:'#eab308'},sl={high:'حرج',medium:'متوسط',low:'منخفض'};
+  return `<div style="margin-bottom:16px"><div style="font-weight:700;font-size:17px">المتابعة اليومية</div><div style="color:var(--txt3);font-size:13px">${ov.length} دفعة — ${cids.length} عقد</div></div>`+
+  cids.map(cid=>{
+    const c=lookupC(cid);if(!c)return'';
+    const t=lookupT(c.tenant_id),u=lookupU(c.unit_id),prop=u?lookupP(u.property_id):null;
+    const ps=byC[cid],totalDue=ps.reduce((s,p)=>s+(p.amount_due-(p.amount_paid||0)),0);
+    const maxDays=Math.max(...ps.map(overdueDays)),sev=overdueSeverity(maxDays),col=sc[sev];
+    const oi=getContractOverdue(cid),vars=buildVars(c,t,u,prop,oi);
+    const rt=encodeURIComponent(applyTemplate(S.templates.reminder,vars));
+    const et=encodeURIComponent(applyTemplate(S.templates.escalation,vars));
+    const ph=t?.phone?.replace(/\D/g,'')||'';
+    const wa=text=>ph?`https://wa.me/966${ph.replace(/^0/,'')}?text=${text}`:'#';
+    return `<div class="card mb-12" style="border-left:3px solid ${col}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-weight:700;font-size:15px">${t?.name||'—'}</span>
+            <span style="background:${col}22;color:${col};font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600">${sl[sev]} • ${maxDays} يوم</span>
+          </div>
+          <div style="color:var(--txt3);font-size:13px;margin-top:2px">${prop?.name||''} — وحدة ${u?.number||''} — ${c.id}</div>
+        </div>
+        <div style="text-align:left;white-space:nowrap">
+          <div style="font-weight:700;font-size:17px;color:${col}">${fmt(totalDue)} ر.س</div>
+          <div style="font-size:12px;color:var(--txt3)">${ps.length} دفعة</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <a href="${wa(rt)}" target="_blank" class="btn btn-wa" style="font-size:13px;padding:7px 12px">📲 تذكير</a>
+        <a href="${wa(et)}" target="_blank" class="btn" style="background:#fee2e2;color:#dc2626;font-size:13px;padding:7px 12px">⚠️ تصعيد</a>
+        <button class="btn btn-outline" style="font-size:13px;padding:7px 12px" data-action="record_payment" data-contract="${cid}">💰 تسجيل دفعة</button>
+      </div>
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:12px;color:var(--txt3);margin-bottom:6px">تسجيل تواصل:</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-outline" style="font-size:12px;padding:5px 10px" data-action="quick_log" data-contract="${cid}" data-log="تم التواصل">✅ تم التواصل</button>
+          <button class="btn btn-outline" style="font-size:12px;padding:5px 10px" data-action="quick_log" data-contract="${cid}" data-log="لا يرد">📵 لا يرد</button>
+          <button class="btn btn-outline" style="font-size:12px;padding:5px 10px" data-action="quick_log" data-contract="${cid}" data-log="وعد بالسداد">🤝 وعد بالسداد</button>
+        </div>
+      </div>
+      ${ps.map(p=>{const d=overdueDays(p),rem=p.amount_due-(p.amount_paid||0);return`<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)"><span>${p.due_date}</span><span>${fmt(rem)} ر.س — <span style="color:${sc[overdueSeverity(d)]}">${d} يوم</span></span></div>`;}).join('')}
+    </div>`;}).join('');
+}
+
+function renderDashboard(){
+  const ov=getOverdue(),totalOv=ov.reduce((s,p)=>s+(p.amount_due-(p.amount_paid||0)),0);
+  const active=S.contracts.filter(c=>!c.deleted&&!c.archived&&c.status==='active');
+  const m=today().slice(0,7);
+  const col=S.payments.filter(p=>!p.deleted&&p.paid_date?.startsWith(m)).reduce((s,p)=>s+p.amount_paid,0);
+  const recent=S.payments.filter(p=>!p.deleted&&p.paid_date).sort((a,b)=>b.paid_date.localeCompare(a.paid_date)).slice(0,5);
+  return `<div class="kpi-strip">
+    <div class="kpi-card"><div class="kpi-val">${active.length}</div><div class="kpi-label">عقود نشطة</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:#ef4444">${ov.length}</div><div class="kpi-label">دفعات متأخرة</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:#ef4444">${fmt(totalOv)}</div><div class="kpi-label">المتأخرات (ر.س)</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:#22c55e">${fmt(col)}</div><div class="kpi-label">محصل هذا الشهر (ر.س)</div></div>
+  </div>
+  <div class="card mt-12"><div style="font-weight:600;margin-bottom:12px">آخر المدفوعات</div>
+  ${recent.map(p=>{const c=lookupC(p.contract_id),t=c?lookupT(c.tenant_id):null,u=c?lookupU(c.unit_id):null;
+    return`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px"><div><div style="font-weight:500">${t?.name||'—'}</div><div style="color:var(--txt3);font-size:12px">${u?'وحدة '+u.number:''} — ${p.paid_date}</div></div><div style="font-weight:600;color:#22c55e">${fmt(p.amount_paid)} ر.س</div></div>`;}).join('')}</div>`;
+}
+
+function renderOverdue(){
+  const ov=getOverdue().sort((a,b)=>overdueDays(b)-overdueDays(a));
+  if(!ov.length)return`<div class="card" style="text-align:center;padding:40px"><div style="font-size:48px">✅</div><div style="font-weight:600;margin-top:12px">لا توجد متأخرات</div></div>`;
+  const sc={high:'#ef4444',medium:'#f97316',low:'#eab308'},sl={high:'حرج',medium:'متوسط',low:'منخفض'};
+  return ov.map(p=>{
+    const c=lookupC(p.contract_id),t=c?lookupT(c.tenant_id):null,u=c?lookupU(c.unit_id):null,prop=u?lookupP(u.property_id):null;
+    const d=overdueDays(p),sev=overdueSeverity(d),rem=p.amount_due-(p.amount_paid||0);
+    return`<div class="card mb-8" style="border-left:3px solid ${sc[sev]}"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-weight:600">${t?.name||'—'}</div><div style="color:var(--txt3);font-size:13px">${prop?.name||''} — وحدة ${u?.number||''} — ${p.due_date}</div></div><div style="text-align:left"><div style="font-weight:700;color:${sc[sev]}">${fmt(rem)} ر.س</div><span style="background:${sc[sev]}22;color:${sc[sev]};font-size:11px;padding:2px 8px;border-radius:20px">${sl[sev]} • ${d} يوم</span></div></div><div style="margin-top:10px"><button class="btn btn-primary" style="font-size:13px" data-action="record_payment" data-contract="${c?.id}" data-payment="${p.id}">💰 تسجيل دفعة</button></div></div>`;}).join('');
+}
+
+function renderProperties(){
+  return S.properties.map(p=>{const us=S.units.filter(u=>u.property_id===p.id);const ac=S.contracts.filter(c=>!c.deleted&&c.status==='active'&&us.some(u=>u.id===c.unit_id));return`<div class="card mb-8"><div style="font-weight:600">${p.name}</div><div style="color:var(--txt3);font-size:13px">${p.city} — ${p.address}</div><div style="font-size:13px;margin-top:4px">${us.length} وحدة — ${ac.length} عقد نشط</div></div>`;}).join('');
+}
+
+function renderTenants(){
+  return S.tenants.map(t=>{const cs=S.contracts.filter(c=>c.tenant_id===t.id);return`<div class="card mb-8"><div style="font-weight:600">${t.name}</div><div style="color:var(--txt3);font-size:13px">${t.phone}</div><div style="font-size:13px;margin-top:4px">${cs.filter(c=>c.status==='active').length} عقد نشط</div></div>`;}).join('');
+}
+
+function renderContracts(){
+  const sc={active:'#22c55e',expired:'#6b7280'},sl={active:'نشط',expired:'منتهي'};
+  return S.contracts.filter(c=>!c.deleted&&!c.archived).map(c=>{
+    const t=lookupT(c.tenant_id),u=lookupU(c.unit_id),prop=u?lookupP(u.property_id):null;
+    const{total:ot}=getContractOverdue(c.id),col=sc[c.status]||'#6b7280';
+    return`<div class="card mb-8" style="border-left:3px solid ${col}"><div style="display:flex;justify-content:space-between"><div><div style="font-weight:600">${c.id} — ${t?.name||'—'}</div><div style="color:var(--txt3);font-size:13px">${prop?.name||''} — وحدة ${u?.number||''}</div><div style="font-size:13px">${fmt(c.annual_rent)} ر.س/سنة</div>${ot>0?`<div style="color:#ef4444;font-size:13px">متأخر: ${fmt(ot)} ر.س</div>`:''}</div><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end"><span style="background:${col}22;color:${col};font-size:11px;padding:2px 8px;border-radius:20px">${sl[c.status]||c.status}</span><button class="btn btn-outline" style="font-size:12px" data-action="view_contract" data-contract="${c.id}">التفاصيل</button></div></div></div>`;}).join('');
+}
+
+function renderContractDetail(cid){
+  const c=lookupC(cid);if(!c)return`<div class="card">غير موجود</div>`;
+  const t=lookupT(c.tenant_id),u=lookupU(c.unit_id),prop=u?lookupP(u.property_id):null;
+  const ps=getContractPayments(cid);
+  const{total:ot,maxDays}=getContractOverdue(cid);
+  const sc={paid:'#22c55e',partial:'#3b82f6',overdue:'#ef4444',pending:'#6b7280'},sl={paid:'مدفوع',partial:'جزئي',overdue:'متأخر',pending:'قادم'};
+  return`<div class="card mb-12"><div style="font-weight:700;font-size:16px;margin-bottom:8px">${c.id}</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px"><div><span style="color:var(--txt3)">المستأجر: </span>${t?.name||'—'}</div><div><span style="color:var(--txt3)">الوحدة: </span>${prop?.name||''} ${u?'— '+u.number:''}</div><div><span style="color:var(--txt3)">البداية: </span>${c.start_date}</div><div><span style="color:var(--txt3)">النهاية: </span>${c.end_date}</div><div><span style="color:var(--txt3)">الإيجار: </span>${fmt(c.annual_rent)} ر.س/سنة</div>${ot>0?`<div><span style="color:#ef4444">متأخر: </span>${fmt(ot)} ر.س</div>`:''}</div></div>
+  <div style="font-weight:600;margin-bottom:8px;margin-top:12px">جدول الدفعات</div>`+
+  ps.map(p=>{const rem=p.amount_due-(p.amount_paid||0),col=sc[p.status]||'#6b7280';return`<div class="card mb-8" style="border-left:3px solid ${col}"><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:14px;font-weight:500">استحقاق: ${p.due_date}</div><div style="font-size:13px;color:var(--txt3)">مستحق: ${fmt(p.amount_due)} ر.س${p.amount_paid>0?` — مدفوع: ${fmt(p.amount_paid)} ر.س`:''}</div>${p.receipt_number?`<div style="font-size:12px;color:var(--txt3)">${p.receipt_number}</div>`:''}</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span style="background:${col}22;color:${col};font-size:11px;padding:2px 8px;border-radius:20px">${sl[p.status]||p.status}</span>${(p.status==='overdue'||p.status==='partial')?`<button class="btn btn-primary" style="font-size:12px" data-action="record_payment" data-contract="${c.id}" data-payment="${p.id}">دفع</button>`:''}</div></div></div>`;}).join('');
+}
+
+function renderPayments(){
+  const ps=S.payments.filter(p=>!p.deleted).sort((a,b)=>(b.paid_date||b.due_date).localeCompare(a.paid_date||a.due_date));
+  const sc={paid:'#22c55e',partial:'#3b82f6',overdue:'#ef4444',pending:'#6b7280'},sl={paid:'مدفوع',partial:'جزئي',overdue:'متأخر',pending:'قادم'};
+  return ps.map(p=>{const c=lookupC(p.contract_id),t=c?lookupT(c.tenant_id):null,u=c?lookupU(c.unit_id):null,col=sc[p.status]||'#6b7280';return`<div class="card mb-8" style="border-left:3px solid ${col}"><div style="display:flex;justify-content:space-between"><div><div style="font-weight:500;font-size:14px">${t?.name||'—'} — ${u?'وحدة '+u.number:''}</div><div style="font-size:13px;color:var(--txt3)">استحقاق: ${p.due_date}</div><div style="font-size:13px">${fmt(p.amount_due)} ر.س${p.amount_paid>0?` (مدفوع: ${fmt(p.amount_paid)})`:''}</div></div><span style="background:${col}22;color:${col};font-size:11px;padding:2px 8px;border-radius:20px;align-self:flex-start">${sl[p.status]||p.status}</span></div></div>`;}).join('');
+}
+
+function renderReports(){
+  const ps=S.payments.filter(p=>!p.deleted);
+  const totalC=ps.filter(p=>p.amount_paid>0).reduce((s,p)=>s+p.amount_paid,0);
+  const totalD=ps.reduce((s,p)=>s+p.amount_due,0);
+  const totalOv=getOverdue().reduce((s,p)=>s+(p.amount_due-(p.amount_paid||0)),0);
+  const rate=totalD>0?((totalC/totalD)*100).toFixed(1):0;
+  return`<div class="kpi-strip"><div class="kpi-card"><div class="kpi-val" style="color:#22c55e">${fmt(totalC)}</div><div class="kpi-label">إجمالي المحصل (ر.س)</div></div><div class="kpi-card"><div class="kpi-val">${fmt(totalD)}</div><div class="kpi-label">إجمالي المستحق (ر.س)</div></div><div class="kpi-card"><div class="kpi-val" style="color:#ef4444">${fmt(totalOv)}</div><div class="kpi-label">المتأخرات (ر.س)</div></div><div class="kpi-card"><div class="kpi-val">${rate}%</div><div class="kpi-label">معدل التحصيل</div></div></div>
+  <div class="card mt-12"><div style="font-weight:600;margin-bottom:12px">تقرير العقود</div>`+
+  S.contracts.filter(c=>!c.deleted).map(c=>{const t=lookupT(c.tenant_id);const cp=ps.filter(p=>p.contract_id===c.id);const paid=cp.reduce((s,p)=>s+p.amount_paid,0),due=cp.reduce((s,p)=>s+p.amount_due,0),pct=due>0?Math.round((paid/due)*100):0;return`<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px"><div><span style="font-weight:500">${c.id}</span> — ${t?.name||'—'}</div><div>${pct}%</div></div><div style="height:6px;background:var(--border);border-radius:3px"><div style="height:100%;width:${pct}%;background:${pct>=80?'#22c55e':pct>=50?'#f97316':'#ef4444'};border-radius:3px"></div></div><div style="font-size:12px;color:var(--txt3);margin-top:2px">${fmt(paid)} / ${fmt(due)} ر.س</div></div>`;}).join('')+'</div>';
+}
+
+function renderTemplates(){
+  const tabs=[{key:'reminder',label:'تذكير'},{key:'escalation',label:'تصعيد'},{key:'receipt',label:'إيصال'}];
+  const sv={tenant_name:'محمد الرشيدي',property_name:'برج النجد',unit_number:'101',contract_number:'C001',ejar_number:'EJR-2024-00881',total_overdue:'9,000 ر.س',overdue_days:'42',installments_list:'• 2024-12-01 — 3,000 ر.س',receipt_number:'RV-2024-027',amount_paid:'3,000 ر.س',paid_date:today()};
+  return`<div class="card mb-12" style="border-left:3px solid var(--blue)"><div style="font-weight:600;margin-bottom:4px">قوالب الرسائل</div><div style="font-size:13px;color:var(--txt3)">التعديلات تُحفظ في وضع التجربة فقط.</div></div>
+  <div class="card"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${tabs.map((td,i)=>`<button class="btn ${i===0?'btn-primary':'btn-outline'}" style="font-size:13px" onclick="switchTab('${td.key}',this)">${td.label}</button>`).join('')}</div>
+  ${tabs.map((td,i)=>`<div id="tpl-tab-${td.key}" style="display:${i===0?'block':'none'}"><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><div><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--txt3)">النص</div><textarea id="tpl-text-${td.key}" style="width:100%;height:220px;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:8px;resize:vertical;direction:rtl;line-height:1.6" oninput="previewTpl('${td.key}')">${S.templates[td.key]||''}</textarea></div><div><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--txt3)">معاينة</div><div id="tpl-preview-${td.key}" style="height:220px;overflow-y:auto;background:var(--bg2);padding:10px;border-radius:8px;font-size:13px;white-space:pre-wrap;direction:rtl;line-height:1.6">${applyTemplate(S.templates[td.key]||'',sv)}</div></div></div><div style="margin-top:10px;display:flex;justify-content:flex-end"><button class="btn btn-primary" data-action="save_template" data-key="${td.key}">💾 حفظ</button></div></div>`).join('')}</div>`;
+}
+
+function handleAction(action,el){
+  if(action==='record_payment'){showPayModal(el.dataset.contract,el.dataset.payment||null);return;}
+  if(action==='view_contract'){navigate('contract_detail',{contract_id:el.dataset.contract});return;}
+  if(action==='quick_log'){S.followup_log.push({id:'FL'+Date.now(),contract_id:el.dataset.contract,action:el.dataset.log,ts:new Date().toISOString()});saveState(S);el.textContent='✅ تم';el.disabled=true;return;}
+  if(action==='submit_payment'){
+    const pid=document.getElementById('pm-pid').value;
+    const amt=parseFloat(document.getElementById('pm-amt').value);
+    const dt=document.getElementById('pm-dt').value;
+    const errEl=document.getElementById('pm-err');
+    if(!amt||amt<=0){errEl.style.display='block';errEl.textContent='يرجى إدخال مبلغ صحيح';return;}
+    const p=lookupPay(pid);if(!p){return;}
+    const rem=p.amount_due-(p.amount_paid||0);
+    if(amt>rem){errEl.style.display='block';errEl.textContent=`المبلغ يتجاوز المتبقي (${fmt(rem)} ر.س)`;return;}
+    p.amount_paid=(p.amount_paid||0)+amt;p.paid_date=dt||today();
+    if(p.amount_paid>=p.amount_due){p.status='paid';if(!p.receipt_number){p.receipt_number=`RV-${new Date().getFullYear()}-${String(S.receipt_seq++).padStart(3,'0')}`;}}
+    else{p.status='partial';if(!p.receipt_number){p.receipt_number=`RV-${new Date().getFullYear()}-${String(S.receipt_seq++).padStart(3,'0')}`;}}
+    saveState(S);document.getElementById('pm-overlay').remove();navigate(currentPage);showToast('تم تسجيل الدفعة ✅');return;
+  }
+  if(action==='save_template'){const key=el.dataset.key;S.templates[key]=document.getElementById('tpl-text-'+key)?.value||'';saveState(S);showToast('تم حفظ القالب ✅');return;}
+}
+
+function showPayModal(cid,pid=null){
+  const c=lookupC(cid);if(!c)return;
+  const t=lookupT(c.tenant_id);
+  let p=pid?lookupPay(pid):null;
+  if(!p){const ps=S.payments.filter(x=>!x.deleted&&x.contract_id===cid&&(x.status==='overdue'||x.status==='partial')).sort((a,b)=>a.due_date.localeCompare(b.due_date));p=ps[0]||null;}
+  if(!p)return;
+  const rem=p.amount_due-(p.amount_paid||0);
+  document.body.insertAdjacentHTML('beforeend',`<div id="pm-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px"><div style="background:var(--bg);border-radius:16px;padding:24px;max-width:400px;width:100%"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div style="font-weight:700;font-size:16px">تسجيل دفعة</div><button onclick="document.getElementById('pm-overlay').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--txt3)">✕</button></div><div style="background:var(--bg2);padding:10px;border-radius:8px;margin-bottom:14px;font-size:13px"><div><strong>العقد:</strong> ${cid} — ${t?.name||'—'}</div><div><strong>الدفعة:</strong> استحقاق ${p.due_date} — متبقي ${fmt(rem)} ر.س</div></div><input type="hidden" id="pm-pid" value="${p.id}"><div style="margin-bottom:10px"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">المبلغ (ر.س)</label><input id="pm-amt" type="number" min="1" max="${rem}" class="input-field" placeholder="${fmt(rem)}"></div><div style="margin-bottom:14px"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">تاريخ الدفع</label><input id="pm-dt" type="date" class="input-field" value="${today()}"></div><div id="pm-err" style="display:none;padding:8px;border-radius:6px;margin-bottom:10px;font-size:13px;background:#fee2e2;color:#dc2626"></div><button class="btn btn-primary" style="width:100%;padding:12px" data-action="submit_payment">تأكيد الدفع</button></div></div>`);
+  bindActions();
+}
+
+function bindActions(){document.querySelectorAll('[data-action]').forEach(el=>{const fresh=el.cloneNode(true);el.parentNode.replaceChild(fresh,el);fresh.addEventListener('click',()=>handleAction(fresh.dataset.action,fresh));});}
+function showToast(msg){const el=document.createElement('div');el.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;z-index:2000;white-space:nowrap';el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2500);}
+window.switchTab=function(key,btn){document.querySelectorAll('[id^="tpl-tab-"]').forEach(el=>el.style.display='none');const tab=document.getElementById('tpl-tab-'+key);if(tab)tab.style.display='block';document.querySelectorAll('.btn[onclick*="switchTab"]').forEach(b=>b.className='btn btn-outline');btn.className='btn btn-primary';};
+window.previewTpl=function(key){const ta=document.getElementById('tpl-text-'+key),pv=document.getElementById('tpl-preview-'+key);if(!ta||!pv)return;const sv={tenant_name:'محمد الرشيدي',property_name:'برج النجد',unit_number:'101',contract_number:'C001',ejar_number:'EJR-2024-00881',total_overdue:'9,000 ر.س',overdue_days:'42',installments_list:'• 2024-12-01 — 3,000 ر.س',receipt_number:'RV-2024-027',amount_paid:'3,000 ر.س',paid_date:today()};pv.textContent=applyTemplate(ta.value,sv);};
+function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('sidebar-overlay').style.display='block';}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').style.display='none';}
+document.getElementById('sidebar-overlay').addEventListener('click',closeSidebar);
+document.getElementById('menu-btn').addEventListener('click',openSidebar);
+renderNav();
+navigate('daily_followup');
+
+</script>
+</body>
+</html>
