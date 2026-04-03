@@ -1,75 +1,142 @@
 # DEPLOYMENT.md — دليل النشر
 
-## 1. Docker Compose (الأسرع)
+---
+
+## الطريقة 1 — Portainer (موصى بها) 🐳
+
+### المتطلبات
+- خادم Linux مع Docker مثبّت
+- Portainer مثبّت ويعمل
+
+---
+
+### الخطوة 1 — تثبيت Portainer (إذا لم يكن مثبّتاً)
 
 ```bash
-# 1. استنسخ المشروع
-git clone https://github.com/THAMERLAP/ejar-pro.git
+docker volume create portainer_data
+
+docker run -d \
+  -p 8000:8000 \
+  -p 9443:9443 \
+  --name portainer \
+  --restart=always \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v portainer_data:/data \
+  portainer/portainer-ce:latest
+```
+
+افتح المتصفح على: `https://SERVER_IP:9443`
+
+---
+
+### الخطوة 2 — نشر إيجار Pro من Portainer
+
+**1.** من القائمة الجانبية اختر **Stacks** ← **+ Add stack**
+
+**2.** في حقل **Name** اكتب:
+```
+ejar-pro
+```
+
+**3.** اختر **Repository** ثم أدخل:
+
+| الحقل | القيمة |
+|-------|--------|
+| Repository URL | `https://github.com/ThamerLab/ejar-pro` |
+| Repository reference | `refs/heads/main` |
+| Compose path | `docker-compose.yml` |
+
+**4.** انزل لأسفل لقسم **Environment variables** واضغط **+ Add an environment variable** وأضف:
+
+| Name | Value |
+|------|-------|
+| `SECRET_KEY` | سلسلة عشوائية طويلة (مثال: `xK9mP2nQ8vL5wR3`) |
+| `ADMIN_USERNAME` | `admin` |
+| `ADMIN_PASSWORD` | كلمة مرور قوية |
+| `DB_PATH` | `/data/ejar.db` |
+
+> ⚠️ **مهم:** غيّر `SECRET_KEY` و `ADMIN_PASSWORD` — لا تتركها الافتراضية.
+
+**5.** اضغط **Deploy the stack** وانتظر 30–60 ثانية.
+
+**6.** بعد النشر الناجح يظهر Status: **running** ✅
+
+افتح التطبيق على: `http://SERVER_IP:8000`
+
+---
+
+### الخطوة 3 — أول دخول
+
+افتح `http://SERVER_IP:8000` في المتصفح.
+
+- **اسم المستخدم:** `admin`
+- **كلمة المرور:** (ما أدخلته في `ADMIN_PASSWORD`)
+
+بعد الدخول روح **المستخدمون** من القائمة وأنشئ حسابات إضافية إذا لزم.
+
+---
+
+### الخطوة 4 — تحديث التطبيق لاحقاً
+
+عند صدور تحديث جديد على GitHub:
+
+1. Portainer → **Stacks** → **ejar-pro**
+2. اضغط **Pull and redeploy**
+3. أكّد بـ **Update**
+
+البيانات محفوظة في الـ volume ولن تُمسح. ✅
+
+---
+
+## الطريقة 2 — Docker Compose مباشرة
+
+```bash
+git clone https://github.com/ThamerLab/ejar-pro.git
 cd ejar-pro
-
-# 2. اضبط المتغيرات
 cp .env.example .env
-nano .env   # غيّر SECRET_KEY و ADMIN_PASSWORD
-
-# 3. شغّل
+nano .env          # غيّر SECRET_KEY و ADMIN_PASSWORD
 docker compose up -d
-
-# 4. تحقق
 docker compose logs -f
 ```
 
-التطبيق يعمل على: `http://SERVER_IP:8000`
+التطبيق يعمل على: `http://localhost:8000`
 
 ---
 
-## 2. Portainer (Stack)
-
-1. افتح Portainer → **Stacks** → **Add stack**
-2. اسم الـ stack: `ejar-pro`
-3. اختر **Repository** والصق رابط الـ GitHub repo
-4. أضف المتغيرات في **Environment variables**:
-
-| المتغير | القيمة |
-|---------|--------|
-| `SECRET_KEY` | سلسلة عشوائية طويلة |
-| `ADMIN_PASSWORD` | كلمة مرور قوية |
-| `ADMIN_USERNAME` | admin |
-
-5. اضغط **Deploy the stack**
-
----
-
-## 3. متغيرات البيئة
+## متغيرات البيئة
 
 | المتغير | الوصف | الافتراضي |
 |---------|-------|-----------|
-| `SECRET_KEY` | مفتاح تشفير الـ session — **غيّره** | `change-this...` |
-| `ADMIN_USERNAME` | اسم المدير الأول | `admin` |
-| `ADMIN_PASSWORD` | كلمة مرور المدير — **غيّرها** | `admin123` |
-| `DB_PATH` | مسار ملف SQLite | `/data/ejar.db` |
+| `SECRET_KEY` | مفتاح تشفير الـ session — **غيّره دائماً** | `change-this...` |
+| `ADMIN_USERNAME` | اسم المدير عند أول تشغيل | `admin` |
+| `ADMIN_PASSWORD` | كلمة مرور المدير — **غيّرها دائماً** | `admin123` |
+| `DB_PATH` | مسار ملف SQLite داخل الحاوية | `/data/ejar.db` |
 
 ---
 
-## 4. البيانات والنسخ الاحتياطي
+## النسخ الاحتياطي
 
-البيانات في Docker Volume اسمه `ejar_data`.
+**من داخل التطبيق:**
+القائمة الجانبية ← ⬇️ تصدير البيانات (JSON)
 
+**من الخادم مباشرة:**
 ```bash
-# نسخ احتياطي
-docker cp ejar-pro:/data/ejar.db ./backup_$(date +%Y%m%d).db
+docker cp ejar-pro:/data/ejar.db ./ejar_backup_$(date +%Y%m%d).db
+```
 
-# أو من داخل التطبيق
-# الشريط الجانبي → ⬇️ تصدير البيانات (JSON)
+**استعادة:**
+```bash
+docker cp ./ejar_backup_YYYYMMDD.db ejar-pro:/data/ejar.db
+docker restart ejar-pro
 ```
 
 ---
 
-## 5. التحديث
+## استكشاف الأخطاء
 
-```bash
-git pull
-docker compose build
-docker compose up -d
-```
-
-البيانات محفوظة في الـ volume ولن تُمسح.
+| المشكلة | الحل |
+|---------|------|
+| الصفحة لا تفتح | `docker logs ejar-pro` |
+| خطأ في تسجيل الدخول | تأكد من `ADMIN_PASSWORD` في المتغيرات |
+| البيانات اختفت | `docker volume ls` — تأكد أن `ejar_data` موجود |
+| المنفذ 8000 مشغول | غيّر `"8000:8000"` لـ `"8080:8000"` في docker-compose.yml |
