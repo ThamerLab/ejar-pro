@@ -9,7 +9,7 @@
 ## تشغيل سريع
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/ejar-pro.git
+git clone https://github.com/ThamerLab/ejar-pro.git
 cd ejar-pro
 cp .env.example .env        # عدّل كلمة المرور والـ secret
 docker compose up -d
