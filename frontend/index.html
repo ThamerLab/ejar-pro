@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إيجار Pro — نظام إدارة العقارات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --ink2: #1a1a2e;
+  --gold: #c9a84c;
+  --gold2: #e8c96d;
+  --cream: #f5f0e8;
+  --cream2: #faf7f2;
+  --muted: #6b6b7a;
+  --border: rgba(201,168,76,0.2);
+  --card: rgba(255,255,255,0.04);
+}
+
+* { box-sizing:border-box; margin:0; padding:0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Tajawal', sans-serif;
+  background: var(--ink);
+  color: var(--cream);
+  overflow-x: hidden;
+  direction: rtl;
+}
+
+/* ── Noise texture overlay ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 20px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(to bottom, rgba(10,10,15,0.95), transparent);
+  backdrop-filter: blur(12px);
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--cream);
+  text-decoration: none;
+}
+
+.nav-logo-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  list-style: none;
+}
+
+.nav-links a {
+  color: rgba(245,240,232,0.6);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  transition: color .2s;
+}
+
+.nav-links a:hover { color: var(--cream); }
+
+.btn-login {
+  padding: 10px 24px;
+  background: transparent;
+  border: 1.5px solid var(--gold);
+  color: var(--gold);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Tajawal', sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .2s;
+  display: inline-block;
+}
+
+.btn-login:hover {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 24px 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Radial glow */
+.hero::after {
+  content: '';
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 500px;
+  background: radial-gradient(ellipse, rgba(201,168,76,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  margin-bottom: 32px;
+  background: rgba(201,168,76,0.06);
+  animation: fadeUp 0.6s ease both;
+}
+
+.hero-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+h1 {
+  font-size: clamp(42px, 7vw, 84px);
+  font-weight: 900;
+  line-height: 1.05;
+  margin-bottom: 8px;
+  animation: fadeUp 0.6s 0.1s ease both;
+}
+
+.h1-gold {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 50%, var(--gold) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero-sub {
+  font-size: clamp(16px, 2vw, 20px);
+  color: rgba(245,240,232,0.55);
+  max-width: 560px;
+  line-height: 1.7;
+  margin: 24px auto 48px;
+  font-weight: 400;
+  animation: fadeUp 0.6s 0.2s ease both;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  animation: fadeUp 0.6s 0.3s ease both;
+}
+
+.btn-primary {
+  padding: 15px 36px;
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  color: var(--ink);
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 800;
+  font-family: 'Tajawal', sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform .2s, box-shadow .2s;
+  box-shadow: 0 8px 32px rgba(201,168,76,0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(201,168,76,0.45);
+}
+
+.btn-ghost {
+  padding: 15px 36px;
+  background: transparent;
+  color: var(--cream);
+  border: 1.5px solid rgba(245,240,232,0.15);
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: 'Tajawal', sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all .2s;
+}
+
+.btn-ghost:hover {
+  border-color: rgba(245,240,232,0.4);
+  background: rgba(245,240,232,0.04);
+}
+
+/* ── HERO MOCKUP ── */
+.hero-mockup {
+  width: 100%;
+  max-width: 900px;
+  margin: 72px auto 0;
+  position: relative;
+  animation: fadeUp 0.8s 0.4s ease both;
+}
+
+.mockup-frame {
+  background: #111118;
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04),
+    0 40px 120px rgba(0,0,0,0.8),
+    0 0 80px rgba(201,168,76,0.08);
+}
+
+.mockup-bar {
+  background: #0d0d14;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-r { background: #ff5f57; }
+.dot-y { background: #febc2e; }
+.dot-g { background: #28c840; }
+
+.mockup-url {
+  flex: 1;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  margin: 0 12px;
+  text-align: center;
+}
+
+.mockup-body {
+  display: flex;
+  height: 460px;
+}
+
+/* Sidebar mockup */
+.mock-sidebar {
+  width: 200px;
+  min-width: 200px;
+  background: #0d0d14;
+  border-left: 1px solid rgba(255,255,255,0.05);
+  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mock-logo {
+  padding: 8px 16px 20px;
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--gold);
+}
+
+.mock-nav-item {
+  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+  border-radius: 6px;
+  margin: 0 8px;
+  transition: all .15s;
+}
+
+.mock-nav-item.active {
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
+}
+
+.mock-nav-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.6;
+}
+
+/* Main content mockup */
+.mock-content {
+  flex: 1;
+  padding: 20px;
+  overflow: hidden;
+  background: #0a0a0f;
+}
+
+.mock-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 16px;
+}
+
+.mock-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.mock-kpi {
+  background: #111118;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+
+.mock-kpi-val {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.mock-kpi-label {
+  font-size: 9px;
+  color: rgba(255,255,255,0.35);
+}
+
+.mock-card {
+  background: #111118;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.mock-card-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 10px;
+}
+
+.mock-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.mock-row:last-child { border: none; }
+
+.mock-name { font-size: 11px; color: rgba(255,255,255,0.75); }
+.mock-sub { font-size: 9px; color: rgba(255,255,255,0.3); margin-top: 1px; }
+
+.mock-badge {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.badge-red { background: rgba(239,68,68,0.15); color: #f87171; }
+.badge-green { background: rgba(34,197,94,0.15); color: #4ade80; }
+.badge-yellow { background: rgba(234,179,8,0.15); color: #facc15; }
+.badge-blue { background: rgba(59,130,246,0.15); color: #60a5fa; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── STATS BAR ── */
+.stats-bar {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 40px 48px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 20px;
+  border-left: 1px solid rgba(255,255,255,0.06);
+}
+
+.stat-item:last-child { border: none; }
+
+.stat-num {
+  font-size: 40px;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: rgba(245,240,232,0.45);
+  font-weight: 500;
+}
+
+/* ── FEATURES ── */
+.section {
+  padding: 100px 48px;
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.section-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 900;
+  line-height: 1.15;
+  margin-bottom: 16px;
+  max-width: 600px;
+}
+
+.section-sub {
+  font-size: 16px;
+  color: rgba(245,240,232,0.5);
+  line-height: 1.7;
+  max-width: 520px;
+  margin-bottom: 60px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.feature-card {
+  background: var(--ink);
+  padding: 36px 32px;
+  transition: background .2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 120px; height: 120px;
+  background: radial-gradient(circle, rgba(201,168,76,0.06), transparent 70%);
+  pointer-events: none;
+}
+
+.feature-card:hover { background: #0f0f1a; }
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 20px;
+  background: rgba(201,168,76,0.06);
+}
+
+.feature-title {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--cream);
+}
+
+.feature-desc {
+  font-size: 14px;
+  color: rgba(245,240,232,0.45);
+  line-height: 1.7;
+}
+
+/* ── WORKFLOW ── */
+.workflow {
+  padding: 100px 48px;
+  background: linear-gradient(to bottom, transparent, rgba(201,168,76,0.03), transparent);
+  position: relative;
+  z-index: 1;
+}
+
+.workflow-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 40px;
+  margin-top: 60px;
+  position: relative;
+}
+
+.steps::before {
+  content: '';
+  position: absolute;
+  top: 28px;
+  right: 12%;
+  left: 12%;
+  height: 1px;
+  background: linear-gradient(to left, transparent, var(--border), transparent);
+}
+
+.step {
+  text-align: center;
+  position: relative;
+}
+
+.step-num {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: rgba(201,168,76,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--gold);
+  margin: 0 auto 20px;
+  font-family: 'JetBrains Mono', monospace;
+  position: relative;
+  z-index: 1;
+}
+
+.step-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.step-desc {
+  font-size: 13px;
+  color: rgba(245,240,232,0.4);
+  line-height: 1.6;
+}
+
+/* ── TECH STACK ── */
+.tech-section {
+  padding: 80px 48px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  position: relative;
+  z-index: 1;
+}
+
+.tech-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 48px;
+  flex-wrap: wrap;
+}
+
+.tech-label {
+  font-size: 12px;
+  color: rgba(245,240,232,0.3);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tech-pills {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tech-pill {
+  padding: 8px 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 100px;
+  font-size: 13px;
+  color: rgba(245,240,232,0.6);
+  font-weight: 600;
+  background: rgba(255,255,255,0.02);
+  font-family: 'JetBrains Mono', monospace;
+  transition: all .2s;
+}
+
+.tech-pill:hover {
+  border-color: var(--border);
+  color: var(--gold);
+  background: rgba(201,168,76,0.05);
+}
+
+/* ── DEPLOY ── */
+.deploy-section {
+  padding: 100px 48px;
+  position: relative;
+  z-index: 1;
+}
+
+.deploy-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.deploy-code {
+  background: #080810;
+  border: 1px solid rgba(201,168,76,0.15);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.code-bar {
+  background: #0d0d16;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.code-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  flex: 1;
+  text-align: center;
+}
+
+pre {
+  padding: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.8;
+  color: rgba(255,255,255,0.7);
+  overflow-x: auto;
+}
+
+.c-comment { color: rgba(255,255,255,0.25); }
+.c-cmd { color: #60a5fa; }
+.c-str { color: var(--gold2); }
+.c-key { color: #a78bfa; }
+
+.deploy-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.deploy-step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.deploy-step-num {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  border-radius: 50%;
+  background: rgba(201,168,76,0.1);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--gold);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.deploy-step-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.deploy-step-desc {
+  font-size: 13px;
+  color: rgba(245,240,232,0.4);
+  line-height: 1.6;
+}
+
+/* ── CTA ── */
+.cta {
+  padding: 120px 48px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.cta::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(201,168,76,0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cta h2 {
+  font-size: clamp(32px, 5vw, 56px);
+  font-weight: 900;
+  margin-bottom: 20px;
+  line-height: 1.1;
+}
+
+.cta p {
+  font-size: 17px;
+  color: rgba(245,240,232,0.5);
+  margin-bottom: 48px;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.7;
+}
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 32px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.footer-copy {
+  font-size: 13px;
+  color: rgba(245,240,232,0.25);
+}
+
+.footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.footer-links a {
+  font-size: 13px;
+  color: rgba(245,240,232,0.3);
+  text-decoration: none;
+  transition: color .2s;
+}
+
+.footer-links a:hover { color: var(--gold); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  .nav-links { display: none; }
+  .stats-bar { grid-template-columns: repeat(2, 1fr); }
+  .features-grid { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: repeat(2, 1fr); }
+  .steps::before { display: none; }
+  .deploy-inner { grid-template-columns: 1fr; }
+  .section, .workflow, .deploy-section, .cta { padding: 60px 20px; }
+  .tech-inner { flex-direction: column; gap: 20px; }
+  footer { flex-direction: column; gap: 16px; text-align: center; }
+  .mockup-body { height: 300px; }
+  .mock-sidebar { width: 140px; min-width: 140px; }
+  .mock-kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <div class="nav-logo-icon">🏢</div>
+    إيجار Pro
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">المزايا</a></li>
+    <li><a href="#workflow">كيف يعمل</a></li>
+    <li><a href="#deploy">النشر</a></li>
+  </ul>
+  <a href="/login" class="btn-login">تسجيل الدخول ←</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">نظام إدارة عقارات سعودي متكامل</div>
+  <h1>
+    أدر عقاراتك<br>
+    <span class="h1-gold">باحترافية</span>
+  </h1>
+  <p class="hero-sub">
+    منصة متكاملة لإدارة العقود والمستأجرين والمدفوعات — مع تكامل مباشر مع منصة إيجار الحكومية وواتساب وTelegram.
+  </p>
+  <div class="hero-actions">
+    <a href="/login" class="btn-primary">ابدأ الآن ←</a>
+    <a href="#features" class="btn-ghost">تعرف على المزايا</a>
+  </div>
+
+  <!-- MOCKUP -->
+  <div class="hero-mockup">
+    <div class="mockup-frame">
+      <div class="mockup-bar">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+        <div class="mockup-url">ejar-pro.yourdomain.com</div>
+      </div>
+      <div class="mockup-body">
+        <!-- Sidebar -->
+        <div class="mock-sidebar">
+          <div class="mock-logo">إيجار Pro</div>
+          <div class="mock-nav-item active"><div class="mock-nav-dot"></div> المتابعة</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> الرئيسية</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> المتأخرات</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> العقود</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> الدفعات</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> التقارير</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div> القوالب</div>
+        </div>
+        <!-- Content -->
+        <div class="mock-content">
+          <div class="mock-title">المتابعة اليومية</div>
+          <div class="mock-kpi-row">
+            <div class="mock-kpi">
+              <div class="mock-kpi-val" style="color:#22c55e">6</div>
+              <div class="mock-kpi-label">عقود نشطة</div>
+            </div>
+            <div class="mock-kpi">
+              <div class="mock-kpi-val" style="color:#ef4444">5</div>
+              <div class="mock-kpi-label">متأخرات</div>
+            </div>
+            <div class="mock-kpi">
+              <div class="mock-kpi-val" style="color:#ef4444">42.5k</div>
+              <div class="mock-kpi-label">إجمالي (ر.س)</div>
+            </div>
+            <div class="mock-kpi">
+              <div class="mock-kpi-val" style="color:#c9a84c">2</div>
+              <div class="mock-kpi-label">تنتهي قريباً</div>
+            </div>
+          </div>
+          <div class="mock-card">
+            <div class="mock-card-header">الدفعات المتأخرة</div>
+            <div class="mock-row">
+              <div>
+                <div class="mock-name">محمد الرشيدي</div>
+                <div class="mock-sub">برج النجد — وحدة 101</div>
+              </div>
+              <div class="mock-badge badge-red">حرج • 42 يوم</div>
+            </div>
+            <div class="mock-row">
+              <div>
+                <div class="mock-name">شركة الفجر للتجارة</div>
+                <div class="mock-sub">برج النجد — وحدة 102</div>
+              </div>
+              <div class="mock-badge badge-yellow">متوسط • 15 يوم</div>
+            </div>
+            <div class="mock-row">
+              <div>
+                <div class="mock-name">سارة القحطاني</div>
+                <div class="mock-sub">مجمع الواحة — وحدة A1</div>
+              </div>
+              <div class="mock-badge badge-yellow">متوسط • 12 يوم</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat-item">
+    <div class="stat-num">100%</div>
+    <div class="stat-label">مفتوح المصدر</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">0</div>
+    <div class="stat-label">خوادم خارجية</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">8</div>
+    <div class="stat-label">جداول في قاعدة البيانات</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-num">∞</div>
+    <div class="stat-label">عقود وعقارات</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <div class="section-tag">المزايا</div>
+  <h2 class="section-title">كل ما تحتاجه في مكان واحد</h2>
+  <p class="section-sub">مبني خصيصاً للسوق السعودي مع تكامل مع منصة إيجار الحكومية.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">📥</div>
+      <div class="feature-title">متابعة يومية ذكية</div>
+      <div class="feature-desc">صندوق وارد يجمع كل المتأخرات مرتّبة حسب الخطورة — منخفض، متوسط، حرج. تعرف فوراً أين تبدأ كل يوم.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📋</div>
+      <div class="feature-title">عقود مرتبطة بإيجار</div>
+      <div class="feature-desc">ربط كل عقد برقم EJR من المنصة الحكومية. جدول دفعات تلقائي شهري أو ربع سنوي أو سنوي.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💰</div>
+      <div class="feature-title">تسجيل دقيق للمدفوعات</div>
+      <div class="feature-desc">دفع جزئي مدعوم مع منع الدفع الزائد. إيصالات برقم تسلسلي تلقائي RV-YYYY-NNN.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📲</div>
+      <div class="feature-title">واتساب بضغطة واحدة</div>
+      <div class="feature-desc">قوالب رسائل عربية جاهزة — تذكير، تصعيد، إيصال. يُفتح واتساب مباشرة مع النص المكتمل.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔗</div>
+      <div class="feature-title">إيصال مؤمَّن للمستأجر</div>
+      <div class="feature-desc">رابط فريد بتوكن عشوائي صالح 10 أيام. المستأجر يرى إيصاله بدون تسجيل دخول.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📨</div>
+      <div class="feature-title">إشعارات Telegram</div>
+      <div class="feature-desc">بوت مخصص يُنبّهك بالمتأخرات والعقود المنتهية. تحكّم كامل بأنواع التنبيهات.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">👥</div>
+      <div class="feature-title">نظام مستخدمين</div>
+      <div class="feature-desc">أدوار admin و viewer. كل عضو في فريقك يدخل بحسابه الخاص بصلاحيات محددة.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📈</div>
+      <div class="feature-title">تقارير التحصيل</div>
+      <div class="feature-desc">معدل التحصيل لكل عقد، إجمالي المتأخرات، المحصّل هذا الشهر — دفعة واحدة.</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">💾</div>
+      <div class="feature-title">نسخ احتياطي JSON</div>
+      <div class="feature-desc">صدّر كل بياناتك بضغطة واحدة. استوردها على أي خادم آخر في ثوانٍ.</div>
+    </div>
+  </div>
+</section>
+
+<!-- WORKFLOW -->
+<section class="workflow" id="workflow">
+  <div class="workflow-inner">
+    <div class="section-tag">كيف يعمل</div>
+    <h2 class="section-title">من الإعداد للمتابعة اليومية</h2>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">أضف عقاراتك</div>
+        <div class="step-desc">سجّل العقارات والوحدات مرة واحدة — المدينة، العنوان، النوع، المساحة.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">أنشئ العقود</div>
+        <div class="step-desc">اربط كل وحدة بمستأجر وعقد إيجار. النظام يُنشئ جدول الدفعات تلقائياً.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">تابع يومياً</div>
+        <div class="step-desc">كل صباح افتح المتابعة اليومية — ترى من يتأخر، كم يوم، وكم المبلغ.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-title">راسل وحصّل</div>
+        <div class="step-desc">أرسل تذكير واتساب بضغطة، سجّل الدفعة، أرسل الإيصال — كل شيء من مكان واحد.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TECH -->
+<div class="tech-section">
+  <div class="tech-inner">
+    <div class="tech-label">مبني بـ</div>
+    <div class="tech-pills">
+      <div class="tech-pill">FastAPI</div>
+      <div class="tech-pill">SQLite</div>
+      <div class="tech-pill">SQLAlchemy</div>
+      <div class="tech-pill">Python 3.12</div>
+      <div class="tech-pill">Vanilla JS</div>
+      <div class="tech-pill">Docker</div>
+    </div>
+  </div>
+</div>
+
+<!-- DEPLOY -->
+<section class="deploy-section" id="deploy">
+  <div class="deploy-inner">
+    <div>
+      <div class="section-tag">النشر</div>
+      <h2 class="section-title">يعمل في دقيقتين على أي خادم</h2>
+      <p class="section-sub" style="margin-bottom:40px">حاوية Docker واحدة تحتوي على كل شيء — لا قاعدة بيانات خارجية، لا إعدادات معقدة.</p>
+      <div class="deploy-steps">
+        <div class="deploy-step">
+          <div class="deploy-step-num">1</div>
+          <div>
+            <div class="deploy-step-title">Portainer → Add Stack</div>
+            <div class="deploy-step-desc">أنشئ Stack جديد واختر Repository</div>
+          </div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-step-num">2</div>
+          <div>
+            <div class="deploy-step-title">أدخل رابط الريبو</div>
+            <div class="deploy-step-desc">github.com/ThamerLab/ejar-pro ثم أضف المتغيرات</div>
+          </div>
+        </div>
+        <div class="deploy-step">
+          <div class="deploy-step-num">3</div>
+          <div>
+            <div class="deploy-step-title">Deploy ✅</div>
+            <div class="deploy-step-desc">النظام يعمل فوراً على المنفذ الذي تختاره</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="deploy-code">
+      <div class="code-bar">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-y"></div>
+        <div class="dot dot-g"></div>
+        <div class="code-title">docker-compose.yml</div>
+      </div>
+      <pre><span class="c-comment"># Portainer Web Editor</span>
+
+<span class="c-key">services</span>:
+  <span class="c-key">ejar-pro</span>:
+    <span class="c-key">build</span>: .
+    <span class="c-key">ports</span>:
+      - <span class="c-str">"8080:8000"</span>
+    <span class="c-key">volumes</span>:
+      - ejar_data:<span class="c-str">/data</span>
+    <span class="c-key">environment</span>:
+      - <span class="c-str">SECRET_KEY=your-secret</span>
+      - <span class="c-str">ADMIN_USERNAME=admin</span>
+      - <span class="c-str">ADMIN_PASSWORD=your-password</span>
+    <span class="c-key">restart</span>: unless-stopped
+
+<span class="c-key">volumes</span>:
+  <span class="c-key">ejar_data</span>:</pre>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta">
+  <h2>جاهز تبدأ؟</h2>
+  <p>سجّل دخولك وابدأ إدارة عقاراتك الآن — البيانات التجريبية جاهزة من اليوم الأول.</p>
+  <a href="/login" class="btn-primary" style="font-size:18px;padding:18px 48px">تسجيل الدخول ←</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-copy">© 2025 إيجار Pro — ThamerLab</div>
+  <div class="footer-links">
+    <a href="https://github.com/ThamerLab/ejar-pro" target="_blank">GitHub</a>
+    <a href="https://github.com/ThamerLab/ejar-pro/blob/main/DEPLOYMENT.md" target="_blank">النشر</a>
+    <a href="https://github.com/ThamerLab/ejar-pro/blob/main/ARCHITECTURE.md" target="_blank">التوثيق</a>
+  </div>
+</footer>
+
+</body>
+</html>
