@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إيجار Pro — تسجيل الدخول</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  direction: rtl;
+}
+.card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.logo {
+  text-align: center;
+  margin-bottom: 32px;
+}
+.logo-icon {
+  font-size: 48px;
+  margin-bottom: 8px;
+}
+.logo h1 {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+.logo p {
+  color: #64748b;
+  font-size: 14px;
+}
+.field {
+  margin-bottom: 16px;
+}
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #f8fafc;
+  transition: border-color .2s;
+  direction: ltr;
+  text-align: right;
+}
+input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  background: #fff;
+}
+.btn {
+  width: 100%;
+  padding: 13px;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background .2s;
+}
+.btn:hover { background: #2563eb; }
+.btn:disabled { background: #93c5fd; cursor: not-allowed; }
+.error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-top: 12px;
+  display: none;
+}
+.footer {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 12px;
+  margin-top: 24px;
+}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">🏢</div>
+    <h1>إيجار Pro</h1>
+    <p>نظام إدارة العقارات والإيجارات</p>
+  </div>
+
+  <div class="field">
+    <label>اسم المستخدم</label>
+    <input type="text" id="username" autocomplete="username" placeholder="admin">
+  </div>
+  <div class="field">
+    <label>كلمة المرور</label>
+    <input type="password" id="password" autocomplete="current-password" placeholder="••••••••">
+  </div>
+
+  <button class="btn" id="login-btn" onclick="doLogin()">دخول</button>
+  <div class="error" id="error-msg"></div>
+
+  <div class="footer">إيجار Pro © 2025</div>
+</div>
+
+<script>
+document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+async function doLogin() {
+  const btn = document.getElementById('login-btn');
+  const errEl = document.getElementById('error-msg');
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+
+  if (!username || !password) {
+    showError('يرجى إدخال اسم المستخدم وكلمة المرور');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'جاري التحقق...';
+  errEl.style.display = 'none';
+
+  const form = new FormData();
+  form.append('username', username);
+  form.append('password', password);
+
+  try {
+    const res = await fetch('/api/auth/login', { method: 'POST', body: form });
+    if (res.ok) {
+      window.location.href = '/app';
+    } else {
+      const data = await res.json();
+      showError(data.detail || 'بيانات الدخول غير صحيحة');
+    }
+  } catch {
+    showError('تعذّر الاتصال بالخادم');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'دخول';
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+</script>
+</body>
+</html>
