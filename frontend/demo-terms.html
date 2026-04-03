@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إيجار Pro — تجربة مجانية</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Tajawal',sans-serif;background:#060609;color:#f2ece0;direction:rtl;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.5}
+.card{background:#0e0e16;border:1px solid rgba(212,168,67,.2);border-radius:20px;padding:48px 40px;max-width:520px;width:100%;position:relative;z-index:1;box-shadow:0 40px 100px rgba(0,0,0,.6)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:18px;margin-bottom:36px}
+.logo-mark{width:32px;height:32px;background:linear-gradient(135deg,#d4a843,#f0c96a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.title{font-size:26px;font-weight:900;margin-bottom:8px;line-height:1.2}
+.sub{font-size:15px;color:rgba(242,236,224,.5);line-height:1.7;margin-bottom:32px}
+.terms-box{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:20px 24px;margin-bottom:28px}
+.terms-title{font-size:13px;font-weight:700;color:#d4a843;margin-bottom:14px;letter-spacing:.05em}
+.term-item{display:flex;gap:12px;align-items:flex-start;font-size:13px;color:rgba(242,236,224,.65);line-height:1.65;margin-bottom:10px}
+.term-item:last-child{margin-bottom:0}
+.term-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+.agree-row{display:flex;align-items:center;gap:12px;margin-bottom:24px;cursor:pointer;user-select:none}
+.checkbox{width:20px;height:20px;min-width:20px;border:2px solid rgba(212,168,67,.4);border-radius:6px;display:flex;align-items:center;justify-content:center;transition:all .2s;background:transparent}
+.checkbox.checked{background:#d4a843;border-color:#d4a843}
+.checkbox.checked::after{content:'✓';color:#060609;font-size:12px;font-weight:900}
+.agree-text{font-size:14px;color:rgba(242,236,224,.7);line-height:1.5}
+.btn-start{width:100%;padding:15px;background:linear-gradient(135deg,#d4a843,#f0c96a);color:#060609;border:none;border-radius:12px;font-size:17px;font-weight:900;font-family:'Tajawal',sans-serif;cursor:pointer;transition:all .2s;box-shadow:0 8px 28px rgba(212,168,67,.3);opacity:.4;pointer-events:none}
+.btn-start.active{opacity:1;pointer-events:all}
+.btn-start.active:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(212,168,67,.5)}
+.back{display:block;text-align:center;margin-top:16px;font-size:13px;color:rgba(242,236,224,.3);text-decoration:none;transition:color .2s}
+.back:hover{color:rgba(242,236,224,.6)}
+.demo-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:100px;font-size:11px;color:#4ade80;font-weight:700;margin-bottom:20px}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-mark">🏢</div>
+    إيجار Pro
+  </div>
+
+  <div class="demo-badge">🚀 وضع التجربة المجانية</div>
+
+  <h1 class="title">جرّب النظام كاملاً<br>بدون تسجيل</h1>
+  <p class="sub">ستحصل على نسخة تجريبية كاملة في متصفحك — بيانات وهمية جاهزة، وتنتهي التجربة تلقائياً عند إغلاق المتصفح.</p>
+
+  <div class="terms-box">
+    <div class="terms-title">📋 شروط التجربة</div>
+    <div class="term-item"><span class="term-icon">💾</span>البيانات تُخزَّن في متصفحك فقط — لا شيء يُرفع للسيرفر</div>
+    <div class="term-item"><span class="term-icon">⏱️</span>تنتهي التجربة تلقائياً عند إغلاق المتصفح</div>
+    <div class="term-item"><span class="term-icon">🔒</span>البيانات التجريبية وهمية وليست بيانات حقيقية</div>
+    <div class="term-item"><span class="term-icon">🚫</span>لا يمكن حفظ أو تصدير بيانات التجربة</div>
+    <div class="term-item"><span class="term-icon">📞</span>للنظام الكامل تواصل معنا عبر واتساب</div>
+  </div>
+
+  <div class="agree-row" onclick="toggleAgree()">
+    <div class="checkbox" id="cb"></div>
+    <span class="agree-text">أوافق على شروط التجربة وأفهم أن البيانات ستُمسح عند إغلاق المتصفح</span>
+  </div>
+
+  <button class="btn-start" id="startBtn" onclick="startDemo()">
+    ابدأ التجربة المجانية ←
+  </button>
+
+  <a href="/" class="back">← رجوع للصفحة الرئيسية</a>
+</div>
+
+<script>
+let agreed = false;
+
+function toggleAgree() {
+  agreed = !agreed;
+  document.getElementById('cb').className = 'checkbox' + (agreed ? ' checked' : '');
+  document.getElementById('startBtn').className = 'btn-start' + (agreed ? ' active' : '');
+}
+
+function startDemo() {
+  if (!agreed) return;
+  // sessionStorage فقط — تنتهي بإغلاق المتصفح
+  sessionStorage.setItem('ejar_demo', '1');
+  sessionStorage.setItem('ejar_demo_ts', Date.now());
+  window.location.href = '/demo';
+}
+</script>
+</body>
+</html>
