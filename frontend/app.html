@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إيجار Pro</title>
+<style>
+:root {
+  --bg: #f8fafc; --bg2: #f1f5f9; --txt: #0f172a; --txt2: #334155;
+  --txt3: #64748b; --border: #e2e8f0; --blue: #3b82f6; --sidebar-w: 240px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#0f172a;--bg2:#1e293b;--txt:#f1f5f9;--txt2:#cbd5e1;--txt3:#94a3b8;--border:#334155; }
+}
+* { box-sizing:border-box;margin:0;padding:0; }
+body { font-family:'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--txt);direction:rtl;display:flex;height:100dvh;overflow:hidden; }
+#sidebar { width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;height:100dvh;overflow:hidden;transition:transform .25s; }
+#sidebar-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99; }
+@media(max-width:700px){
+  #sidebar{position:fixed;right:0;top:0;z-index:100;transform:translateX(100%);}
+  #sidebar.open{transform:translateX(0);}
+}
+#app-shell { flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0; }
+#topbar { background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:12px; }
+#menu-btn { background:none;border:none;font-size:22px;cursor:pointer;color:var(--txt); }
+@media(min-width:701px){#menu-btn{display:none;}}
+#page-title { font-weight:700;font-size:16px;flex:1; }
+#main-content { flex:1;overflow-y:auto;padding:16px; }
+.nav-item { display:flex;align-items:center;gap:10px;width:100%;padding:10px 16px;border:none;background:none;color:var(--txt2);font-size:14px;cursor:pointer;text-align:right;transition:background .15s; }
+.nav-item:hover { background:var(--border); }
+.nav-active { background:var(--blue)!important;color:#fff!important; }
+.card { background:var(--bg2);border-radius:12px;padding:14px 16px;border:1px solid var(--border); }
+.mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}.mt-12{margin-top:12px}
+.kpi-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px;}
+.kpi-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;}
+.kpi-val{font-size:22px;font-weight:800;}.kpi-label{font-size:11px;color:var(--txt3);margin-top:4px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-family:inherit;font-weight:500;text-decoration:none;transition:opacity .15s;}
+.btn:hover{opacity:.85;}
+.btn-primary{background:var(--blue);color:#fff;}.btn-outline{background:var(--bg);color:var(--txt2);border:1px solid var(--border);}
+.btn-wa{background:#25d366;color:#fff;}.btn-danger{background:#ef4444;color:#fff;}
+.input-field{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--txt);font-size:14px;font-family:inherit;direction:rtl;}
+.input-field:focus{outline:2px solid var(--blue);border-color:transparent;}
+.toggle-switch{position:relative;display:inline-block;width:44px;height:24px;}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-slider{position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:24px;transition:.3s;}
+.toggle-slider:before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s;}
+input:checked+.toggle-slider{background:var(--blue);}
+input:checked+.toggle-slider:before{transform:translateX(20px);}
+.spinner{text-align:center;padding:40px;color:var(--txt3);font-size:14px;}
+</style>
+</head>
+<body>
+<div id="sidebar-overlay"></div>
+<div id="sidebar"></div>
+<div id="app-shell">
+  <div id="topbar">
+    <button id="menu-btn">☰</button>
+    <span id="page-title">المتابعة اليومية</span>
+    <span id="user-badge" style="font-size:12px;color:var(--txt3)"></span>
+  </div>
+  <div id="main-content"><div class="spinner">⏳ جاري التحميل...</div></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// API layer — all fetch calls
+// ══════════════════════════════════════════════════════
+const API = {
+  async get(path) {
+    const r = await fetch(path);
+    if (r.status === 401) { location.href = '/'; return null; }
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+  async post(path, formData) {
+    const r = await fetch(path, { method: 'POST', body: formData });
+    if (r.status === 401) { location.href = '/'; return null; }
+    if (!r.ok) { const d = await r.json(); throw new Error(d.detail || 'خطأ'); }
+    return r.json();
+  },
+  async postJSON(path, data) {
+    const r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
+    if (r.status === 401) { location.href = '/'; return null; }
+    if (!r.ok) { const d = await r.json(); throw new Error(d.detail || 'خطأ'); }
+    return r.json();
+  },
+  form(obj) {
+    const f = new FormData();
+    Object.entries(obj).forEach(([k,v]) => v != null && f.append(k, v));
+    return f;
+  }
+};
+
+// ══════════════════════════════════════════════════════
+// State
+// ══════════════════════════════════════════════════════
+let currentPage = 'daily_followup';
+let currentUser = null;
+// In-memory cache (refreshed on navigate)
+let _cache = {};
+
+async function loadCache() {
+  _cache = {};
+  const [props, units, tenants, contracts, payments] = await Promise.all([
+    API.get('/api/properties'),
+    API.get('/api/units'),
+    API.get('/api/tenants'),
+    API.get('/api/contracts'),
+    API.get('/api/payments'),
+  ]);
+  _cache.properties = props || [];
+  _cache.units = units || [];
+  _cache.tenants = tenants || [];
+  _cache.contracts = contracts || [];
+  _cache.payments = payments || [];
+}
+
+// ══════════════════════════════════════════════════════
+// Business logic (pure, client-side)
+// ══════════════════════════════════════════════════════
+function today() { return new Date().toISOString().slice(0,10); }
+function fmt(n) { return Number(n||0).toLocaleString('en-SA'); }
+function daysDiff(from, to) { return Math.floor((new Date(to)-new Date(from))/86400000); }
+
+function isOverdue(p) {
+  if (p.deleted || p.status==='paid') return false;
+  const remaining = p.amount_due - (p.amount_paid||0);
+  if (remaining<=0) return false;
+  return daysDiff(p.due_date, today()) >= 1;
+}
+function overdueDays(p) { return isOverdue(p) ? daysDiff(p.due_date, today()) : 0; }
+function overdueSeverity(d) { return d<=7?'low':d<=30?'medium':'high'; }
+
+function getOverduePayments() { return _cache.payments.filter(p=>!p.deleted&&isOverdue(p)); }
+function lookupTenant(id) { return _cache.tenants.find(t=>t.id===id); }
+function lookupUnit(id) { return _cache.units.find(u=>u.id===id); }
+function lookupProperty(id) { return _cache.properties.find(p=>p.id===id); }
+function lookupContract(id) { return _cache.contracts.find(c=>c.id===id); }
+function lookupPayment(id) { return _cache.payments.find(p=>p.id===id); }
+function getActiveContract(unitId) {
+  return _cache.contracts.find(c=>!c.deleted&&!c.archived&&c.unit_id===unitId&&c.status==='active');
+}
+function getContractPayments(contractId) { return _cache.payments.filter(p=>p.contract_id===contractId&&!p.deleted); }
+function getContractOverdue(contractId) {
+  const pmnts = _cache.payments.filter(p=>!p.deleted&&p.contract_id===contractId&&isOverdue(p));
+  const total = pmnts.reduce((s,p)=>s+(p.amount_due-(p.amount_paid||0)),0);
+  const maxDays = pmnts.reduce((mx,p)=>Math.max(mx,overdueDays(p)),0);
+  return {payments:pmnts,total,maxDays};
+}
+
+function applyTemplate(tpl, vars) {
+  return tpl.replace(/\{\{(\w+)\}\}/g, (_,k)=>vars[k]!==undefined?vars[k]:`{{${k}}}`);
+}
+function buildTemplateVars(contract, tenant, unit, property, overdueInfo, payment=null) {
+  const overdueList = overdueInfo.payments
+    .map(p=>`• ${p.due_date} — ${fmt(p.amount_due-(p.amount_paid||0))} ر.س`).join('\n');
+  const oldest = overdueInfo.payments.reduce((mn,p)=>(!mn||p.due_date<mn.due_date?p:mn),null);
+  const vars = {
+    tenant_name: tenant?.name||'',
+    property_name: property?.name||'',
+    unit_number: unit?.number||'',
+    contract_number: contract.id,
+    ejar_number: contract.ejar_number||'',
+    total_overdue: fmt(overdueInfo.total)+' ر.س',
+    overdue_days: String(overdueInfo.maxDays),
+    oldest_due: oldest?.due_date||'',
+    installments_list: overdueList,
+  };
+  if (payment) {
+    vars.receipt_number = payment.receipt_number||'';
+    vars.amount_paid = fmt(payment.amount_paid)+' ر.س';
+    vars.paid_date = payment.paid_date||'';
+    vars.receipt_link = '';
+  }
+  return vars;
+}
+
+// ══════════════════════════════════════════════════════
+// Nav
+// ══════════════════════════════════════════════════════
+const navItems = [
+  {id:'daily_followup',icon:'📥',label:'المتابعة'},
+  {id:'dashboard',icon:'📊',label:'الرئيسية'},
+  {id:'overdue',icon:'🔴',label:'المتأخرات'},
+  {id:'contracts',icon:'📋',label:'العقود'},
+  {id:'payments',icon:'💰',label:'الدفعات'},
+  {id:'properties',icon:'🏢',label:'العقارات'},
+  {id:'tenants',icon:'👤',label:'المستأجرون'},
+  {id:'reports',icon:'📈',label:'التقارير'},
+  {id:'notifications',icon:'🔔',label:'الإشعارات'},
+  {id:'templates',icon:'✉️',label:'القوالب'},
+  {id:'telegram',icon:'📨',label:'Telegram'},
+  {id:'archive',icon:'🗄️',label:'الأرشيف'},
+  {id:'deleted_records',icon:'🗑️',label:'المحذوفات'},
+  {id:'users',icon:'👥',label:'المستخدمون'},
+];
+const titles = {
+  daily_followup:'المتابعة اليومية',dashboard:'الرئيسية',overdue:'المتأخرات',
+  contracts:'العقود',payments:'الدفعات',properties:'العقارات',units:'الوحدات',
+  tenants:'المستأجرون',reports:'التقارير',notifications:'الإشعارات',
+  contract_detail:'تفاصيل العقد',templates:'قوالب الرسائل',
+  telegram:'إعدادات Telegram',archive:'الأرشيف',deleted_records:'المحذوفات',
+  add_contract:'إضافة عقد',users:'إدارة المستخدمين',
+};
+
+function renderNav() {
+  const overdueCount = getOverduePayments().length;
+  const sidebar = document.getElementById('sidebar');
+  const isAdmin = currentUser?.role === 'admin';
+
+  sidebar.innerHTML = `
+  <div style="padding:16px;border-bottom:1px solid var(--border)">
+    <div style="font-weight:800;font-size:18px;color:var(--blue)">إيجار Pro</div>
+    <div style="font-size:11px;color:var(--txt3);margin-top:2px">إدارة العقارات</div>
+  </div>
+  <nav style="flex:1;overflow-y:auto;padding:8px 0">
+    ${navItems.filter(n=>n.id!=='users'||isAdmin).map(n=>`
+      <button class="nav-item${currentPage===n.id?' nav-active':''}" data-page="${n.id}">
+        <span style="font-size:18px">${n.icon}</span>
+        <span style="flex:1">${n.label}</span>
+        ${(n.id==='daily_followup'||n.id==='overdue')&&overdueCount>0?`<span style="background:#ef4444;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px">${overdueCount}</span>`:''}
+      </button>`).join('')}
+  </nav>
+  <div style="padding:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px">
+    <a href="/api/export" class="btn btn-outline" style="font-size:12px;text-align:center">⬇️ تصدير البيانات</a>
+    <button class="btn btn-outline" style="font-size:12px;color:#ef4444" onclick="doLogout()">🚪 تسجيل الخروج</button>
+  </div>`;
+
+  sidebar.querySelectorAll('.nav-item').forEach(btn=>{
+    btn.addEventListener('click',()=>{ closeSidebar(); navigate(btn.dataset.page); });
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// Router
+// ══════════════════════════════════════════════════════
+async function navigate(page, params={}) {
+  currentPage = page;
+  document.getElementById('page-title').textContent = titles[page]||page;
+  document.getElementById('main-content').innerHTML = '<div class="spinner">⏳ جاري التحميل...</div>';
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('nav-active',el.dataset.page===page));
+
+  await loadCache();
+  renderNav();
+
+  let html = '';
+  switch(page) {
+    case 'daily_followup': html = renderDailyFollowup(); break;
+    case 'dashboard':      html = await renderDashboard(); break;
+    case 'overdue':        html = renderOverdue(); break;
+    case 'properties':     html = renderProperties(); break;
+    case 'units':          html = renderUnits(params.property_id); break;
+    case 'tenants':        html = renderTenants(); break;
+    case 'contracts':      html = renderContracts(); break;
+    case 'contract_detail':html = renderContractDetail(params.contract_id); break;
+    case 'payments':       html = renderPayments(); break;
+    case 'reports':        html = await renderReports(); break;
+    case 'notifications':  html = renderNotifications(); break;
+    case 'templates':      html = await renderTemplates(); break;
+    case 'telegram':       html = await renderTelegram(); break;
+    case 'archive':        html = renderArchive(); break;
+    case 'deleted_records':html = await renderDeletedRecords(); break;
+    case 'add_contract':   html = renderAddContractForm(); break;
+    case 'users':          html = await renderUsers(); break;
+    default: html = `<div class="card">صفحة غير موجودة</div>`;
+  }
+  document.getElementById('main-content').innerHTML = html;
+  bindActions();
+}
+
+// ══════════════════════════════════════════════════════
+// Page renderers
+// ══════════════════════════════════════════════════════
+function renderDailyFollowup() {
+  const overdue = getOverduePayments();
+  if (!overdue.length) return `<div class="card" style="text-align:center;padding:40px"><div style="font-size:48px">✅</div><div style="font-weight:600;margin-top:12px">لا توجد دفعات متأخرة</div></div>`;
+
+  const byContract = {};
+  overdue.forEach(p=>{ if(!byContract[p.contract_id]) byContract[p.contract_id]=[]; byContract[p.contract_id].push(p); });
+  const cids = Object.keys(byContract).sort((a,b)=>Math.max(...byContract[b].map(overdueDays))-Math.max(...byContract[a].map(overdueDays)));
+  const sevColor={high:'#ef4444',medium:'#f97316',low:'#eab308'};
+  const sevLabel={high:'حرج',medium:'متوسط',low:'منخفض'};
+
+  return `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div><div style="font-weight:700;font-size:17px">المتابعة اليومية</div>
+    <div style="color:var(--txt3);font-size:13px">${overdue.length} دفعة — ${cids.length} عقد</div></div>
+  </div>` + cids.map(cid=>{
+    const c=lookupContract(cid); if(!c) return '';
+    const t=lookupTenant(c.tenant_id), u=lookupUnit(c.unit_id), prop=u?lookupProperty(u.property_id):null;
+    const pmnts=byContract[cid];
+    const totalDue=pmnts.reduce((s,p)=>s+(p.amount_due-(p.amount_paid||0)),0);
+    const maxDays=Math.max(...pmnts.map(overdueDays));
+    const sev=overdueSeverity(maxDays);
+    const col=sevColor[sev];
+    const overdueInfo=getContractOverdue(cid);
+    const vars=buildTemplateVars(c,t,u,prop,overdueInfo);
+    const tpls=window._templates||{reminder:'',escalation:''};
+    const reminderText=encodeURIComponent(applyTemplate(tpls.reminder||'',vars));
+    const escalationText=encodeURIComponent(applyTemplate(tpls.escalation||'',vars));
+    const phone=t?.phone?.replace(/\D/g,'')||'';
+    const wa=(text)=>phone?`https://wa.me/966${phone.replace(/^0/,'')}?text=${text}`:'#';
+
+    return `<div class="card mb-12" style="border-left:3px solid ${col}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-weight:700;font-size:15px">${t?.name||'—'}</span>
+            <span style="background:${col}22;color:${col};font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600">${sevLabel[sev]} • ${maxDays} يوم</span>
+          </div>
+          <div style="color:var(--txt3);font-size:13px;margin-top:2px">${prop?.name||''} — وحدة ${u?.number||''} — ${c.id}</div>
+        </div>
+        <div style="text-align:left;white-space:nowrap">
+          <div style="font-weight:700;font-size:17px;color:${col}">${fmt(totalDue)} ر.س</div>
+          <div style="font-size:12px;color:var(--txt3)">${pmnts.length} دفعة</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <a href="${wa(reminderText)}" target="_blank" class="btn btn-wa" style="font-size:13px;padding:7px 12px">📲 تذكير</a>
+        <a href="${wa(escalationText)}" target="_blank" class="btn" style="background:#fee2e2;color:#dc2626;font-size:13px;padding:7px 12px">⚠️ تصعيد</a>
+        <button class="btn btn-outline" style="font-size:13px;padding:7px 12px" data-action="record_payment" data-contract="${cid}">💰 تسجيل دفعة</button>
+      </div>
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:12px;color:var(--txt3);margin-bottom:6px">تسجيل تواصل سريع:</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-outline" style="font-size:12px;padding:5px 10px" data-action="quick_log" data-contract="${cid}" data-log="تم التواصل">✅ تم التواصل</button>
+          <button class="btn btn-outline" style="font-size:12px;padding:5px 10px" data-action="quick_log" data-contract="${cid}" data-log="لا يرد">📵 لا يرد</button>
+          <button class="btn btn-outline" style="font-size:12px;padding:5px 10px" data-action="quick_log" data-contract="${cid}" data-log="وعد بالسداد">🤝 وعد بالسداد</button>
+        </div>
+      </div>
+      ${pmnts.map(p=>{const d=overdueDays(p),rem=p.amount_due-(p.amount_paid||0);
+        return `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)">
+          <span>${p.due_date}${p.status==='partial'?' <span style="color:var(--blue);font-size:11px">(جزئي)</span>':''}</span>
+          <span>${fmt(rem)} ر.س — <span style="color:${sevColor[overdueSeverity(d)]}">${d} يوم</span></span>
+        </div>`;}).join('')}
+    </div>`;
+  }).join('');
+}
+
+async function renderDashboard() {
+  const s = await API.get('/api/stats') || {};
+  const recent = _cache.payments.filter(p=>!p.deleted&&p.paid_date).sort((a,b)=>b.paid_date.localeCompare(a.paid_date)).slice(0,5);
+  return `<div class="kpi-strip">
+    <div class="kpi-card"><div class="kpi-val">${s.active_contracts||0}</div><div class="kpi-label">عقود نشطة</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:#ef4444">${s.overdue_count||0}</div><div class="kpi-label">دفعات متأخرة</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:#ef4444">${fmt(s.total_overdue)}</div><div class="kpi-label">إجمالي المتأخرات (ر.س)</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:#22c55e">${fmt(s.collected_this_month)}</div><div class="kpi-label">محصل هذا الشهر (ر.س)</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:#f97316">${s.expiring_count||0}</div><div class="kpi-label">عقود تنتهي قريباً</div></div>
+  </div>
+  <div class="card mt-12"><div style="font-weight:600;margin-bottom:12px">آخر المدفوعات</div>
+  ${recent.map(p=>{const c=lookupContract(p.contract_id),t=c?lookupTenant(c.tenant_id):null,u=c?lookupUnit(c.unit_id):null;
+    return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px">
+      <div><div style="font-weight:500">${t?.name||'—'}</div><div style="color:var(--txt3);font-size:12px">${u?'وحدة '+u.number:''} — ${p.paid_date}</div></div>
+      <div style="font-weight:600;color:#22c55e">${fmt(p.amount_paid)} ر.س</div>
+    </div>`;}).join('')||'<div style="color:var(--txt3)">لا توجد مدفوعات</div>'}</div>`;
+}
+
+function renderOverdue() {
+  const overdue = getOverduePayments().sort((a,b)=>overdueDays(b)-overdueDays(a));
+  if (!overdue.length) return `<div class="card" style="text-align:center;padding:40px"><div style="font-size:48px">✅</div><div style="font-weight:600;margin-top:12px">لا توجد دفعات متأخرة</div></div>`;
+  const sc={high:'#ef4444',medium:'#f97316',low:'#eab308'},sl={high:'حرج',medium:'متوسط',low:'منخفض'};
+  return overdue.map(p=>{
+    const c=lookupContract(p.contract_id),t=c?lookupTenant(c.tenant_id):null,u=c?lookupUnit(c.unit_id):null,prop=u?lookupProperty(u.property_id):null;
+    const d=overdueDays(p),sev=overdueSeverity(d),rem=p.amount_due-(p.amount_paid||0);
+    return `<div class="card mb-8" style="border-left:3px solid ${sc[sev]}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:600">${t?.name||'—'}</div>
+        <div style="color:var(--txt3);font-size:13px">${prop?.name||''} — وحدة ${u?.number||''} — استحق ${p.due_date}</div></div>
+        <div style="text-align:left">
+          <div style="font-weight:700;color:${sc[sev]}">${fmt(rem)} ر.س</div>
+          <span style="background:${sc[sev]}22;color:${sc[sev]};font-size:11px;padding:2px 8px;border-radius:20px">${sl[sev]} • ${d} يوم</span>
+        </div>
+      </div>
+      <div style="margin-top:10px">
+        <button class="btn btn-primary" style="font-size:13px" data-action="record_payment" data-contract="${c?.id}" data-payment="${p.id}">💰 تسجيل دفعة</button>
+      </div>
+    </div>`;}).join('');
+}
+
+function renderProperties() {
+  return `<div style="margin-bottom:12px"><button class="btn btn-primary" data-action="add_property">+ إضافة عقار</button></div>` +
+  _cache.properties.map(p=>{
+    const units=_cache.units.filter(u=>u.property_id===p.id&&!u.deleted);
+    const active=_cache.contracts.filter(c=>!c.deleted&&!c.archived&&c.status==='active'&&units.some(u=>u.id===c.unit_id));
+    return `<div class="card mb-8"><div style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-weight:600">${p.name}</div>
+      <div style="color:var(--txt3);font-size:13px">${p.city} — ${p.address}</div>
+      <div style="font-size:13px;margin-top:4px">${units.length} وحدة — ${active.length} عقد نشط</div></div>
+      <button class="btn btn-outline" data-action="view_units" data-property="${p.id}">الوحدات ←</button>
+    </div></div>`;}).join('');
+}
+
+function renderUnits(propertyId=null) {
+  let units=_cache.units.filter(u=>!u.deleted);
+  if(propertyId) units=units.filter(u=>u.property_id===propertyId);
+  const prop=propertyId?lookupProperty(propertyId):null;
+  return `<div style="margin-bottom:12px;display:flex;gap:8px;align-items:center">
+    ${prop?`<span style="color:var(--txt3)">${prop.name}</span><span style="color:var(--txt3)">—</span>`:''}
+    <button class="btn btn-primary" data-action="add_unit" data-property="${propertyId||''}">+ إضافة وحدة</button>
+  </div>` + units.map(u=>{
+    const p=lookupProperty(u.property_id),active=getActiveContract(u.id),t=active?lookupTenant(active.tenant_id):null;
+    return `<div class="card mb-8"><div style="font-weight:600">وحدة ${u.number} — ${p?.name||''}</div>
+      <div style="color:var(--txt3);font-size:13px">الطابق ${u.floor} — ${u.type} — ${u.area_m2} م²</div>
+      <div style="font-size:13px;margin-top:4px">${active?`<span style="color:#22c55e">مؤجرة — ${t?.name||''}</span>`:'<span style="color:var(--txt3)">شاغرة</span>'}</div>
+    </div>`;}).join('');
+}
+
+function renderTenants() {
+  return `<div style="margin-bottom:12px"><button class="btn btn-primary" data-action="add_tenant">+ إضافة مستأجر</button></div>` +
+  _cache.tenants.filter(t=>!t.deleted).map(t=>{
+    const cs=_cache.contracts.filter(c=>!c.deleted&&c.tenant_id===t.id);
+    const active=cs.filter(c=>!c.archived&&c.status==='active');
+    return `<div class="card mb-8"><div style="font-weight:600">${t.name}</div>
+      <div style="color:var(--txt3);font-size:13px">${t.phone} — ${t.email||''}</div>
+      <div style="font-size:13px;margin-top:4px">${active.length} عقد نشط — ${cs.length} إجمالي</div>
+    </div>`;}).join('');
+}
+
+function renderContracts() {
+  const cs=_cache.contracts.filter(c=>!c.deleted&&!c.archived);
+  const sc={active:'#22c55e',expired:'#6b7280',terminated:'#ef4444'};
+  const sl={active:'نشط',expired:'منتهي',terminated:'مفسوخ'};
+  return `<div style="margin-bottom:12px"><button class="btn btn-primary" data-action="goto_add_contract">+ إضافة عقد</button></div>` +
+  cs.map(c=>{
+    const t=lookupTenant(c.tenant_id),u=lookupUnit(c.unit_id),prop=u?lookupProperty(u.property_id):null;
+    const {total:ot}=getContractOverdue(c.id);
+    const col=sc[c.status]||'#6b7280';
+    return `<div class="card mb-8" style="border-left:3px solid ${col}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:600">${c.id} — ${t?.name||'—'}</div>
+        <div style="color:var(--txt3);font-size:13px">${prop?.name||''} — وحدة ${u?.number||''}</div>
+        <div style="font-size:13px;margin-top:4px">${c.start_date} ← ${c.end_date}</div>
+        <div style="font-size:13px">${fmt(c.annual_rent)} ر.س/سنة — ${c.installments} دفعة</div>
+        ${ot>0?`<div style="color:#ef4444;font-size:13px;margin-top:4px">متأخر: ${fmt(ot)} ر.س</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+          <span style="background:${col}22;color:${col};font-size:11px;padding:2px 8px;border-radius:20px">${sl[c.status]||c.status}</span>
+          <button class="btn btn-outline" style="font-size:12px" data-action="view_contract" data-contract="${c.id}">التفاصيل</button>
+          <button class="btn btn-outline" style="font-size:12px" data-action="archive_contract" data-contract="${c.id}">أرشفة</button>
+        </div>
+      </div>
+    </div>`;}).join('');
+}
+
+function renderContractDetail(cid) {
+  const c=lookupContract(cid); if(!c) return `<div class="card">عقد غير موجود</div>`;
+  const t=lookupTenant(c.tenant_id),u=lookupUnit(c.unit_id),prop=u?lookupProperty(u.property_id):null;
+  const pmnts=getContractPayments(cid);
+  const {total:ot,maxDays}=getContractOverdue(cid);
+  const sc={paid:'#22c55e',partial:'#3b82f6',overdue:'#ef4444',pending:'#6b7280'};
+  const sl={paid:'مدفوع',partial:'جزئي',overdue:'متأخر',pending:'قادم'};
+  return `<div class="card mb-12">
+    <div style="font-weight:700;font-size:16px;margin-bottom:8px">${c.id}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:14px">
+      <div><span style="color:var(--txt3)">المستأجر: </span>${t?.name||'—'}</div>
+      <div><span style="color:var(--txt3)">الوحدة: </span>${prop?.name||''} ${u?'— '+u.number:''}</div>
+      <div><span style="color:var(--txt3)">البداية: </span>${c.start_date}</div>
+      <div><span style="color:var(--txt3)">النهاية: </span>${c.end_date}</div>
+      <div><span style="color:var(--txt3)">الإيجار: </span>${fmt(c.annual_rent)} ر.س/سنة</div>
+      <div><span style="color:var(--txt3)">الدفعات: </span>${c.installments}</div>
+      <div><span style="color:var(--txt3)">رقم إيجار: </span>${c.ejar_number||'—'}</div>
+      ${ot>0?`<div><span style="color:#ef4444">متأخر: </span>${fmt(ot)} ر.س (${maxDays} يوم)</div>`:''}
+    </div>
+  </div>
+  <div style="font-weight:600;margin-bottom:8px">جدول الدفعات</div>` +
+  pmnts.map(p=>{
+    const rem=p.amount_due-(p.amount_paid||0),col=sc[p.status]||'#6b7280';
+    return `<div class="card mb-8" style="border-left:3px solid ${col}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:14px;font-weight:500">استحقاق: ${p.due_date}</div>
+        <div style="font-size:13px;color:var(--txt3)">مستحق: ${fmt(p.amount_due)} ر.س${p.amount_paid>0?` — مدفوع: ${fmt(p.amount_paid)} ر.س`:''}${rem>0&&p.amount_paid>0?` — متبقي: ${fmt(rem)} ر.س`:''}</div>
+        ${p.receipt_number?`<div style="font-size:12px;color:var(--txt3)">${p.receipt_number}${p.paid_date?' — '+p.paid_date:''}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <span style="background:${col}22;color:${col};font-size:11px;padding:2px 8px;border-radius:20px">${sl[p.status]||p.status}</span>
+          ${(p.status==='overdue'||p.status==='partial')?`<button class="btn btn-primary" style="font-size:12px" data-action="record_payment" data-contract="${c.id}" data-payment="${p.id}">دفع</button>`:''}
+          ${p.receipt_number?`<button class="btn btn-outline" style="font-size:12px" data-action="share_receipt" data-payment="${p.id}">📤 إيصال</button>`:''}
+        </div>
+      </div>
+    </div>`;}).join('');
+}
+
+function renderPayments() {
+  const pmnts=_cache.payments.filter(p=>!p.deleted).sort((a,b)=>(b.paid_date||b.due_date).localeCompare(a.paid_date||a.due_date));
+  const sc={paid:'#22c55e',partial:'#3b82f6',overdue:'#ef4444',pending:'#6b7280'};
+  const sl={paid:'مدفوع',partial:'جزئي',overdue:'متأخر',pending:'قادم'};
+  return `<div style="margin-bottom:12px;font-size:13px;color:var(--txt3)">${pmnts.length} دفعة</div>` +
+  pmnts.map(p=>{
+    const c=lookupContract(p.contract_id),t=c?lookupTenant(c.tenant_id):null,u=c?lookupUnit(c.unit_id):null;
+    const col=sc[p.status]||'#6b7280';
+    return `<div class="card mb-8" style="border-left:3px solid ${col}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:500;font-size:14px">${t?.name||'—'} — ${u?'وحدة '+u.number:''}</div>
+        <div style="font-size:13px;color:var(--txt3)">استحقاق: ${p.due_date}</div>
+        <div style="font-size:13px">${fmt(p.amount_due)} ر.س${p.amount_paid>0?` (مدفوع: ${fmt(p.amount_paid)})`:''}</div>
+        ${p.receipt_number?`<div style="font-size:12px;color:var(--txt3)">${p.receipt_number}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <span style="background:${col}22;color:${col};font-size:11px;padding:2px 8px;border-radius:20px">${sl[p.status]||p.status}</span>
+          ${p.receipt_number?`<button class="btn btn-outline" style="font-size:12px" data-action="share_receipt" data-payment="${p.id}">📤 إيصال</button>`:''}
+          <button class="btn btn-outline" style="font-size:12px;color:#ef4444" data-action="delete_payment" data-id="${p.id}">🗑</button>
+        </div>
+      </div>
+    </div>`;}).join('');
+}
+
+async function renderReports() {
+  const s=await API.get('/api/stats')||{};
+  const pmnts=_cache.payments.filter(p=>!p.deleted);
+  const totalCollected=pmnts.filter(p=>p.amount_paid>0).reduce((s,p)=>s+p.amount_paid,0);
+  const totalDue=pmnts.reduce((s,p)=>s+p.amount_due,0);
+  const rate=totalDue>0?((totalCollected/totalDue)*100).toFixed(1):0;
+  const cs=_cache.contracts.filter(c=>!c.deleted);
+  return `<div class="kpi-strip">
+    <div class="kpi-card"><div class="kpi-val" style="color:#22c55e">${fmt(totalCollected)}</div><div class="kpi-label">إجمالي المحصل (ر.س)</div></div>
+    <div class="kpi-card"><div class="kpi-val">${fmt(totalDue)}</div><div class="kpi-label">إجمالي المستحق (ر.س)</div></div>
+    <div class="kpi-card"><div class="kpi-val" style="color:#ef4444">${fmt(s.total_overdue)}</div><div class="kpi-label">المتأخرات (ر.س)</div></div>
+    <div class="kpi-card"><div class="kpi-val">${rate}%</div><div class="kpi-label">معدل التحصيل</div></div>
+  </div>
+  <div class="card mt-12"><div style="font-weight:600;margin-bottom:12px">تقرير العقود</div>` +
+  cs.map(c=>{
+    const t=lookupTenant(c.tenant_id),u=lookupUnit(c.unit_id);
+    const cp=pmnts.filter(p=>p.contract_id===c.id);
+    const paid=cp.reduce((s,p)=>s+p.amount_paid,0);
+    const due=cp.reduce((s,p)=>s+p.amount_due,0);
+    const pct=due>0?Math.round((paid/due)*100):0;
+    return `<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px">
+        <div><span style="font-weight:500">${c.id}</span> — ${t?.name||'—'} — ${u?'وحدة '+u.number:''}</div><div>${pct}%</div>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px">
+        <div style="height:100%;width:${pct}%;background:${pct>=80?'#22c55e':pct>=50?'#f97316':'#ef4444'};border-radius:3px"></div>
+      </div>
+      <div style="font-size:12px;color:var(--txt3);margin-top:2px">${fmt(paid)} / ${fmt(due)} ر.س</div>
+    </div>`;}).join('') + '</div>';
+}
+
+function renderNotifications() {
+  const items=[];
+  const sc={high:'#ef4444',medium:'#f97316',low:'#eab308'};
+  getOverduePayments().forEach(p=>{
+    const c=lookupContract(p.contract_id),t=c?lookupTenant(c.tenant_id):null;
+    const d=overdueDays(p),sev=overdueSeverity(d);
+    items.push({col:sc[sev],text:`تأخر ${d} يوم — ${t?.name||'—'} — ${fmt(p.amount_due-(p.amount_paid||0))} ر.س`});
+  });
+  const cutoff60=new Date(); cutoff60.setDate(cutoff60.getDate()+60);
+  _cache.contracts.filter(c=>!c.deleted&&!c.archived&&c.status==='active'&&c.end_date<=cutoff60.toISOString().slice(0,10)).forEach(c=>{
+    const t=lookupTenant(c.tenant_id);
+    const dl=daysDiff(today(),c.end_date);
+    items.push({col:dl<=30?'#ef4444':'#f97316',text:`عقد ينتهي خلال ${dl} يوم — ${t?.name||'—'} (${c.id})`});
+  });
+  if(!items.length) return `<div class="card" style="text-align:center;padding:40px"><div style="font-size:48px">🔔</div><div style="font-weight:600;margin-top:12px">لا توجد إشعارات</div></div>`;
+  return items.map(i=>`<div class="card mb-8" style="border-left:3px solid ${i.col}"><div style="font-size:14px">${i.text}</div></div>`).join('');
+}
+
+async function renderTemplates() {
+  const tpls = await API.get('/api/settings/templates') || {};
+  window._templates = tpls;
+  const sampleVars={tenant_name:'محمد الرشيدي',property_name:'برج النجد',unit_number:'101',contract_number:'C001',ejar_number:'EJR-2024-00881',total_overdue:'9,000 ر.س',overdue_days:'42',oldest_due:'2024-02-01',installments_list:'• 2024-02-01 — 3,000 ر.س\n• 2024-03-01 — 3,000 ر.س',receipt_number:'RV-2024-027',amount_paid:'3,000 ر.س',paid_date:today(),receipt_link:'رابط الإيصال: https://example.com/receipt/abc...'};
+  const tabs=[{key:'reminder',label:'تذكير'},{key:'escalation',label:'تصعيد'},{key:'receipt',label:'إيصال'}];
+  return `<div class="card mb-12" style="border-left:3px solid var(--blue)"><div style="font-weight:600;margin-bottom:4px">قوالب الرسائل</div><div style="font-size:13px;color:var(--txt3)">تخصيص نصوص رسائل واتساب.</div></div>
+  <div class="card">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      ${tabs.map((td,i)=>`<button class="btn ${i===0?'btn-primary':'btn-outline'}" style="font-size:13px" onclick="switchTab('${td.key}',this)">${td.label}</button>`).join('')}
+    </div>
+    ${tabs.map((td,i)=>`<div id="tpl-tab-${td.key}" style="display:${i===0?'block':'none'}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--txt3)">النص</div>
+          <textarea id="tpl-text-${td.key}" style="width:100%;height:260px;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--border);border-radius:8px;resize:vertical;direction:rtl;line-height:1.6" oninput="previewTpl('${td.key}')">${tpls[td.key]||''}</textarea>
+        </div>
+        <div><div style="font-size:12px;font-weight:600;margin-bottom:6px;color:var(--txt3)">معاينة</div>
+          <div id="tpl-preview-${td.key}" style="height:260px;overflow-y:auto;background:var(--bg2);padding:10px;border-radius:8px;font-size:13px;white-space:pre-wrap;direction:rtl;line-height:1.6">${applyTemplate(tpls[td.key]||'',sampleVars)}</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;justify-content:flex-end">
+        <button class="btn btn-primary" data-action="save_template" data-key="${td.key}">💾 حفظ</button>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+async function renderTelegram() {
+  const cfg = await API.get('/api/settings/telegram') || {};
+  const alerts=cfg.alerts||{};
+  const alertDefs=[{key:'overdue_new',label:'دفعة جديدة متأخرة'},{key:'overdue_escalation',label:'تصعيد (30+ يوم)'},{key:'payment_received',label:'استلام دفعة'},{key:'contract_expiring',label:'عقد ينتهي قريباً'}];
+  return `<div class="card mb-12" style="border-left:3px solid var(--blue)"><div style="font-weight:600;margin-bottom:4px">إعدادات Telegram</div><div style="font-size:13px;color:var(--txt3)">استقبال الإشعارات عبر بوت Telegram.</div></div>
+  <div class="card mb-12">
+    <div style="font-weight:600;margin-bottom:12px">بيانات البوت</div>
+    <div style="margin-bottom:10px"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">Bot Token</label>
+      <input id="tg-token" type="text" class="input-field" style="font-family:monospace" value="${cfg.bot_token||''}" placeholder="123456:ABC-DEF..."></div>
+    <div style="margin-bottom:12px"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">Chat ID</label>
+      <input id="tg-chat" type="text" class="input-field" style="font-family:monospace" value="${cfg.chat_id||''}" placeholder="-100123456789"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" data-action="save_telegram">💾 حفظ</button>
+      <button class="btn btn-outline" data-action="test_telegram">📨 اختبار</button>
+    </div>
+    <div id="tg-status" style="margin-top:8px;font-size:13px"></div>
+  </div>
+  <div class="card"><div style="font-weight:600;margin-bottom:12px">التنبيهات</div>
+    ${alertDefs.map(a=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:14px">${a.label}</span>
+      <label class="toggle-switch"><input type="checkbox" data-alert-key="${a.key}" ${alerts[a.key]?'checked':''} onchange="saveTelegramAlert(this)"><span class="toggle-slider"></span></label>
+    </div>`).join('')}
+  </div>`;
+}
+
+function renderArchive() {
+  const archived=_cache.contracts.filter(c=>!c.deleted&&c.archived);
+  if(!archived.length) return `<div class="card" style="text-align:center;padding:40px"><div style="color:var(--txt3)">لا توجد عقود مؤرشفة</div></div>`;
+  return archived.map(c=>{const t=lookupTenant(c.tenant_id),u=lookupUnit(c.unit_id);
+    return `<div class="card mb-8"><div style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-weight:600">${c.id} — ${t?.name||'—'}</div>
+      <div style="color:var(--txt3);font-size:13px">${u?'وحدة '+u.number:''} — ${c.start_date} : ${c.end_date}</div>
+      <div style="font-size:13px">${fmt(c.annual_rent)} ر.س/سنة</div></div>
+      <button class="btn btn-outline" style="font-size:12px" data-action="unarchive_contract" data-contract="${c.id}">استعادة</button>
+    </div></div>`;}).join('');
+}
+
+async function renderDeletedRecords() {
+  const deleted = await API.get('/api/payments?include_deleted=true') || [];
+  const pmnts=deleted.filter(p=>p.deleted);
+  if(!pmnts.length) return `<div class="card" style="text-align:center;padding:40px"><div style="color:var(--txt3)">لا توجد سجلات محذوفة</div></div>`;
+  return `<div style="font-size:13px;color:var(--txt3);margin-bottom:12px">سجلات محذوفة ناعماً — الأثر المحاسبي محفوظ</div>` +
+  pmnts.map(p=>{const c=lookupContract(p.contract_id),t=c?lookupTenant(c.tenant_id):null;
+    return `<div class="card mb-8" style="opacity:.7"><div style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-weight:500;font-size:14px">${t?.name||'—'} — ${p.due_date}</div>
+      <div style="font-size:13px;color:var(--txt3)">${fmt(p.amount_due)} ر.س — ${p.receipt_number||'بدون إيصال'}</div>
+      <div style="font-size:12px;color:var(--txt3)">حُذف: ${p.deleted_at||'—'}</div></div>
+      <button class="btn btn-outline" style="font-size:12px" data-action="restore_payment" data-id="${p.id}">استعادة</button>
+    </div></div>`;}).join('');
+}
+
+async function renderUsers() {
+  if(currentUser?.role!=='admin') return `<div class="card">غير مصرح</div>`;
+  const users=await API.get('/api/users')||[];
+  return `<div class="card mb-12">
+    <div style="font-weight:600;margin-bottom:12px">إضافة مستخدم</div>
+    <div style="display:grid;gap:10px">
+      <input id="nu-username" class="input-field" placeholder="اسم المستخدم">
+      <input id="nu-fullname" class="input-field" placeholder="الاسم الكامل">
+      <input id="nu-password" type="password" class="input-field" placeholder="كلمة المرور">
+      <select id="nu-role" class="input-field"><option value="viewer">مشاهد</option><option value="admin">مدير</option></select>
+      <button class="btn btn-primary" data-action="create_user">+ إضافة</button>
+    </div>
+  </div>
+  <div class="card"><div style="font-weight:600;margin-bottom:12px">المستخدمون</div>
+  ${users.map(u=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+    <div><div style="font-weight:500">${u.full_name}</div>
+    <div style="font-size:13px;color:var(--txt3)">${u.username} — ${u.role==='admin'?'مدير':'مشاهد'} ${!u.is_active?'(معطّل)':''}</div></div>
+    ${u.id!==currentUser?.id?`<button class="btn btn-outline" style="font-size:12px;color:#ef4444" data-action="deactivate_user" data-id="${u.id}">تعطيل</button>`:'<span style="font-size:12px;color:var(--txt3)">أنت</span>'}
+  </div>`).join('')}
+  </div>`;
+}
+
+function renderAddContractForm() {
+  const freeUnits=_cache.units.filter(u=>!u.deleted&&!getActiveContract(u.id));
+  const tenants=_cache.tenants.filter(t=>!t.deleted);
+  return `<div class="card"><div style="display:grid;gap:12px">
+    <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">الوحدة</label>
+      <select id="ac-unit" class="input-field"><option value="">اختر وحدة...</option>
+      ${freeUnits.map(u=>{const p=lookupProperty(u.property_id);return `<option value="${u.id}">${p?.name||''} — وحدة ${u.number}</option>`;}).join('')}</select></div>
+    <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">المستأجر</label>
+      <select id="ac-tenant" class="input-field"><option value="">اختر مستأجر...</option>
+      ${tenants.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}</select></div>
+    <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">رقم عقد إيجار</label>
+      <input id="ac-ejar" type="text" class="input-field" placeholder="EJR-YYYY-XXXXX"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">البداية</label><input id="ac-start" type="date" class="input-field"></div>
+      <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">النهاية</label><input id="ac-end" type="date" class="input-field"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">الإيجار السنوي (ر.س)</label><input id="ac-rent" type="number" class="input-field" placeholder="36000"></div>
+      <div><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">عدد الدفعات</label>
+        <select id="ac-inst" class="input-field"><option value="1">1 (سنوي)</option><option value="2">2 (نصف سنوي)</option><option value="4" selected>4 (ربع سنوي)</option><option value="12">12 (شهري)</option></select></div>
+    </div>
+    <div id="ac-error" style="display:none;color:#ef4444;font-size:13px;padding:8px;background:#fee2e2;border-radius:6px"></div>
+    <button class="btn btn-primary" style="width:100%;padding:12px" data-action="submit_add_contract">إنشاء العقد</button>
+  </div></div>`;
+}
+
+// ══════════════════════════════════════════════════════
+// Modals
+// ══════════════════════════════════════════════════════
+function showPaymentModal(contractId, paymentId=null) {
+  const c=lookupContract(contractId); if(!c) return;
+  const t=lookupTenant(c.tenant_id),u=lookupUnit(c.unit_id);
+  let targetPayment=paymentId?lookupPayment(paymentId):null;
+  if(!targetPayment) {
+    const pending=_cache.payments.filter(p=>!p.deleted&&p.contract_id===contractId&&(p.status==='overdue'||p.status==='partial')).sort((a,b)=>a.due_date.localeCompare(b.due_date));
+    targetPayment=pending[0]||null;
+  }
+  const remaining=targetPayment?targetPayment.amount_due-(targetPayment.amount_paid||0):0;
+  const html=`<div id="pay-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="background:var(--bg);border-radius:16px;padding:24px;max-width:400px;width:100%">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-weight:700;font-size:16px">تسجيل دفعة</div>
+        <button onclick="document.getElementById('pay-overlay').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--txt3)">✕</button>
+      </div>
+      <div style="background:var(--bg2);padding:10px;border-radius:8px;margin-bottom:14px;font-size:13px">
+        <div><strong>العقد:</strong> ${contractId} — ${t?.name||'—'}</div>
+        ${targetPayment?`<div><strong>الدفعة:</strong> استحقاق ${targetPayment.due_date} — متبقي ${fmt(remaining)} ر.س</div>`:''}
+      </div>
+      <input type="hidden" id="pay-contract-id" value="${contractId}">
+      <input type="hidden" id="pay-payment-id" value="${targetPayment?.id||''}">
+      <div style="margin-bottom:10px"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">المبلغ المدفوع (ر.س)</label>
+        <input id="pay-amount" type="number" min="1" max="${remaining||999999}" class="input-field" placeholder="${fmt(remaining)}"></div>
+      <div style="margin-bottom:14px"><label style="font-size:13px;font-weight:500;display:block;margin-bottom:4px">تاريخ الدفع</label>
+        <input id="pay-date" type="date" class="input-field" value="${today()}"></div>
+      <div id="pay-err" style="display:none;padding:8px;border-radius:6px;margin-bottom:10px;font-size:13px;background:#fee2e2;color:#dc2626"></div>
+      <button class="btn btn-primary" style="width:100%;padding:12px" data-action="submit_payment">تأكيد الدفع</button>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+  bindActions();
+}
+
+async function showReceiptModal(paymentId) {
+  const p=lookupPayment(paymentId)||_cache.payments.find(x=>x.id===paymentId);
+  if(!p||!p.receipt_number) return;
+  const c=lookupContract(p.contract_id),t=c?lookupTenant(c.tenant_id):null,u=c?lookupUnit(c.unit_id):null,prop=u?lookupProperty(u.property_id):null;
+  const tokenData=await API.post(`/api/payments/${paymentId}/receipt-token`,new FormData())||{};
+  const token=tokenData.token||'';
+  const receiptUrl=`${location.origin}/receipt/${token}`;
+  const tpls=window._templates||(await API.get('/api/settings/templates'))||{};
+  const overdueInfo=getContractOverdue(c?.id||'');
+  const vars=buildTemplateVars(c,t,u,prop,overdueInfo,p);
+  vars.receipt_link=`رابط الإيصال: ${receiptUrl}`;
+  const msg=applyTemplate(tpls.receipt||'',vars);
+  const phone=t?.phone?.replace(/\D/g,'')||'';
+  const waLink=phone?`https://wa.me/966${phone.replace(/^0/,'')}?text=${encodeURIComponent(msg)}`:null;
+
+  const html=`<div id="receipt-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="background:var(--bg);border-radius:16px;padding:24px;max-width:440px;width:100%;max-height:80vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-weight:700;font-size:16px">📄 ${p.receipt_number}</div>
+        <button onclick="document.getElementById('receipt-overlay').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--txt3)">✕</button>
+      </div>
+      <div style="background:var(--bg2);padding:12px;border-radius:8px;margin-bottom:12px;font-size:14px">
+        <div><strong>المستأجر:</strong> ${t?.name||'—'}</div>
+        <div><strong>الوحدة:</strong> ${prop?.name||''} — ${u?.number||''}</div>
+        <div><strong>المبلغ:</strong> ${fmt(p.amount_paid)} ر.س</div>
+        <div><strong>التاريخ:</strong> ${p.paid_date||'—'}</div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:12px;color:var(--txt3);margin-bottom:4px">رابط الإيصال (صالح 10 أيام):</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" value="${receiptUrl}" readonly style="flex:1;font-size:11px;padding:6px;border:1px solid var(--border);border-radius:6px;font-family:monospace;background:var(--bg2)">
+          <button class="btn btn-outline" style="font-size:12px;white-space:nowrap" onclick="navigator.clipboard.writeText('${receiptUrl}').then(()=>{this.textContent='✅ تم'})">نسخ</button>
+        </div>
+      </div>
+      ${waLink?`<a href="${waLink}" target="_blank" class="btn btn-wa" style="display:block;text-align:center;text-decoration:none;padding:12px">📲 إرسال عبر واتساب</a>`:'<div style="color:var(--txt3);font-size:13px">لا يوجد رقم هاتف</div>'}
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+// ══════════════════════════════════════════════════════
+// Action handler
+// ══════════════════════════════════════════════════════
+async function handleAction(action, el) {
+  try {
+    if (action==='record_payment') { showPaymentModal(el.dataset.contract, el.dataset.payment||null); return; }
+    if (action==='share_receipt') { await showReceiptModal(el.dataset.payment); return; }
+
+    if (action==='submit_payment') {
+      const cid=document.getElementById('pay-contract-id').value;
+      const pid=document.getElementById('pay-payment-id').value;
+      const amt=document.getElementById('pay-amount').value;
+      const dt=document.getElementById('pay-date').value;
+      const errEl=document.getElementById('pay-err');
+      if(!amt||parseFloat(amt)<=0){errEl.style.display='block';errEl.textContent='يرجى إدخال مبلغ صحيح';return;}
+      try {
+        const payment=await API.post(`/api/payments/${pid}/record`,API.form({amount_paid:amt,paid_date:dt}));
+        document.getElementById('pay-overlay').remove();
+        await navigate(currentPage);
+        if(payment?.receipt_number) await showReceiptModal(payment.id);
+        showToast('تم تسجيل الدفعة ✅');
+      } catch(e){errEl.style.display='block';errEl.textContent=e.message;}
+      return;
+    }
+
+    if (action==='delete_payment') {
+      if(!confirm('حذف ناعم للدفعة؟')) return;
+      await API.post(`/api/payments/${el.dataset.id}/delete`,new FormData());
+      await navigate(currentPage); showToast('تم الحذف');
+      return;
+    }
+    if (action==='restore_payment') {
+      await API.post(`/api/payments/${el.dataset.id}/restore`,new FormData());
+      await navigate('deleted_records'); showToast('تمت الاستعادة ✅');
+      return;
+    }
+
+    if (action==='view_contract') { navigate('contract_detail',{contract_id:el.dataset.contract}); return; }
+    if (action==='archive_contract') {
+      if(!confirm('أرشفة العقد '+el.dataset.contract+'؟')) return;
+      await API.post(`/api/contracts/${el.dataset.contract}/archive`,new FormData());
+      await navigate('contracts'); showToast('تمت الأرشفة');
+      return;
+    }
+    if (action==='unarchive_contract') {
+      await API.post(`/api/contracts/${el.dataset.contract}/unarchive`,new FormData());
+      await navigate('archive'); showToast('تمت الاستعادة ✅');
+      return;
+    }
+    if (action==='goto_add_contract') { navigate('add_contract'); return; }
+
+    if (action==='submit_add_contract') {
+      const errEl=document.getElementById('ac-error');
+      const f={unit_id:document.getElementById('ac-unit').value,tenant_id:document.getElementById('ac-tenant').value,ejar_number:document.getElementById('ac-ejar').value,start_date:document.getElementById('ac-start').value,end_date:document.getElementById('ac-end').value,annual_rent:document.getElementById('ac-rent').value,installments:document.getElementById('ac-inst').value};
+      if(!f.unit_id){errEl.style.display='block';errEl.textContent='يرجى اختيار وحدة';return;}
+      if(!f.tenant_id){errEl.style.display='block';errEl.textContent='يرجى اختيار مستأجر';return;}
+      try {
+        const res=await API.post('/api/contracts',API.form(f));
+        showToast(`تم إنشاء العقد ${res.id} ✅`);
+        navigate('contract_detail',{contract_id:res.id});
+      } catch(e){errEl.style.display='block';errEl.textContent=e.message;}
+      return;
+    }
+
+    if (action==='quick_log') {
+      await API.post('/api/followup',API.form({contract_id:el.dataset.contract,action:el.dataset.log}));
+      el.textContent='✅ تم'; el.disabled=true;
+      return;
+    }
+
+    if (action==='view_units') { navigate('units',{property_id:el.dataset.property}); return; }
+
+    if (action==='save_template') {
+      const key=el.dataset.key;
+      const tpls=await API.get('/api/settings/templates')||{};
+      tpls[key]=document.getElementById('tpl-text-'+key)?.value||'';
+      await API.postJSON('/api/settings/templates',tpls);
+      window._templates=tpls;
+      showToast('تم حفظ القالب ✅');
+      return;
+    }
+
+    if (action==='save_telegram') {
+      const cfg=await API.get('/api/settings/telegram')||{alerts:{}};
+      cfg.bot_token=document.getElementById('tg-token').value.trim();
+      cfg.chat_id=document.getElementById('tg-chat').value.trim();
+      await API.postJSON('/api/settings/telegram',cfg);
+      showToast('تم الحفظ ✅');
+      return;
+    }
+    if (action==='test_telegram') {
+      const statusEl=document.getElementById('tg-status');
+      const cfg=await API.get('/api/settings/telegram')||{};
+      if(!cfg.bot_token||!cfg.chat_id){if(statusEl)statusEl.innerHTML='<span style="color:#ef4444">احفظ البيانات أولاً</span>';return;}
+      if(statusEl) statusEl.innerHTML='<span style="color:var(--txt3)">جاري الإرسال...</span>';
+      fetch(`https://api.telegram.org/bot${cfg.bot_token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:cfg.chat_id,text:`✅ إيجار Pro — رسالة تجريبية\n${new Date().toLocaleString('ar-SA')}`})})
+        .then(r=>r.json()).then(d=>{if(statusEl)statusEl.innerHTML=d.ok?'<span style="color:#22c55e">✅ تم الإرسال</span>':`<span style="color:#ef4444">❌ ${d.description}</span>`;})
+        .catch(e=>{if(statusEl)statusEl.innerHTML=`<span style="color:#ef4444">❌ ${e.message}</span>`;});
+      return;
+    }
+
+    if (action==='create_user') {
+      const f={username:document.getElementById('nu-username').value,full_name:document.getElementById('nu-fullname').value,password:document.getElementById('nu-password').value,role:document.getElementById('nu-role').value};
+      await API.post('/api/users',API.form(f));
+      showToast('تم إنشاء المستخدم ✅'); navigate('users');
+      return;
+    }
+    if (action==='deactivate_user') {
+      if(!confirm('تعطيل هذا المستخدم؟')) return;
+      await fetch(`/api/users/${el.dataset.id}`,{method:'DELETE'});
+      showToast('تم التعطيل'); navigate('users');
+      return;
+    }
+  } catch(e) {
+    showToast('❌ '+e.message);
+  }
+}
+
+function bindActions() {
+  document.querySelectorAll('[data-action]').forEach(el=>{
+    const fresh=el.cloneNode(true);
+    el.parentNode.replaceChild(fresh,el);
+    fresh.addEventListener('click',()=>handleAction(fresh.dataset.action,fresh));
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// Global helpers
+// ══════════════════════════════════════════════════════
+window.switchTab = function(key,btn){
+  document.querySelectorAll('[id^="tpl-tab-"]').forEach(el=>el.style.display='none');
+  const tab=document.getElementById('tpl-tab-'+key);
+  if(tab) tab.style.display='block';
+  document.querySelectorAll('.btn[onclick*="switchTab"]').forEach(b=>b.className='btn btn-outline');
+  btn.className='btn btn-primary';
+};
+window.previewTpl = function(key){
+  const ta=document.getElementById('tpl-text-'+key);
+  const pv=document.getElementById('tpl-preview-'+key);
+  if(!ta||!pv) return;
+  const sampleVars={tenant_name:'محمد الرشيدي',property_name:'برج النجد',unit_number:'101',contract_number:'C001',ejar_number:'EJR-2024-00881',total_overdue:'9,000 ر.س',overdue_days:'42',oldest_due:'2024-02-01',installments_list:'• 2024-02-01 — 3,000 ر.س',receipt_number:'RV-2024-027',amount_paid:'3,000 ر.س',paid_date:today(),receipt_link:'رابط الإيصال: https://example.com/receipt/abc...'};
+  pv.textContent=applyTemplate(ta.value,sampleVars);
+};
+window.saveTelegramAlert = async function(checkbox){
+  const cfg=await API.get('/api/settings/telegram')||{alerts:{}};
+  if(!cfg.alerts) cfg.alerts={};
+  cfg.alerts[checkbox.dataset.alertKey]=checkbox.checked;
+  await API.postJSON('/api/settings/telegram',cfg);
+};
+
+function showToast(msg){
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 20px;border-radius:20px;font-size:14px;z-index:2000;white-space:nowrap';
+  el.textContent=msg; document.body.appendChild(el);
+  setTimeout(()=>el.remove(),2500);
+}
+
+function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('sidebar-overlay').style.display='block';}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sidebar-overlay').style.display='none';}
+
+async function doLogout(){
+  await fetch('/api/auth/logout',{method:'POST'});
+  location.href='/';
+}
+
+// ══════════════════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════════════════
+async function init(){
+  currentUser=await API.get('/api/auth/me');
+  if(!currentUser){location.href='/';return;}
+  document.getElementById('user-badge').textContent=currentUser.full_name;
+  document.getElementById('sidebar-overlay').addEventListener('click',closeSidebar);
+  document.getElementById('menu-btn').addEventListener('click',openSidebar);
+  // preload templates for WA links
+  window._templates=await API.get('/api/settings/templates')||{};
+  await navigate('daily_followup');
+}
+
+init();
+</script>
+</body>
+</html>
