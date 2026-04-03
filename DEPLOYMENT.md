@@ -4,7 +4,7 @@
 
 ```bash
 # 1. استنسخ المشروع
-git clone https://github.com/YOUR_USERNAME/ejar-pro.git
+git clone https://github.com/THAMERLAP/ejar-pro.git
 cd ejar-pro
 
 # 2. اضبط المتغيرات
