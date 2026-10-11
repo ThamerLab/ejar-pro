@@ -1,142 +1,55 @@
-# DEPLOYMENT.md — دليل النشر
+# Ejar Pro — Deployment Guide
 
----
+> **Security:** Use trusted LAN/VPN or HTTPS with a protected reverse proxy. Do not expose this app publicly without a complete security review. Database contains personal and financial information.
 
-## الطريقة 1 — Portainer (موصى بها) 🐳
-
-### المتطلبات
-- خادم Linux مع Docker مثبّت
-- Portainer مثبّت ويعمل
-
----
-
-### الخطوة 1 — تثبيت Portainer (إذا لم يكن مثبّتاً)
-
-```bash
-docker volume create portainer_data
-
-docker run -d \
-  -p 8000:8000 \
-  -p 9443:9443 \
-  --name portainer \
-  --restart=always \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v portainer_data:/data \
-  portainer/portainer-ce:latest
-```
-
-افتح المتصفح على: `https://SERVER_IP:9443`
-
----
-
-### الخطوة 2 — نشر إيجار Pro من Portainer
-
-**1.** من القائمة الجانبية اختر **Stacks** ← **+ Add stack**
-
-**2.** في حقل **Name** اكتب:
-```
-ejar-pro
-```
-
-**3.** اختر **Repository** ثم أدخل:
-
-| الحقل | القيمة |
-|-------|--------|
-| Repository URL | `https://github.com/ThamerLab/ejar-pro` |
-| Repository reference | `refs/heads/main` |
-| Compose path | `docker-compose.yml` |
-
-**4.** انزل لأسفل لقسم **Environment variables** واضغط **+ Add an environment variable** وأضف:
-
-| Name | Value |
-|------|-------|
-| `SECRET_KEY` | سلسلة عشوائية طويلة (مثال: `xK9mP2nQ8vL5wR3`) |
-| `ADMIN_USERNAME` | `admin` |
-| `ADMIN_PASSWORD` | كلمة مرور قوية |
-| `DB_PATH` | `/data/ejar.db` |
-
-> ⚠️ **مهم:** غيّر `SECRET_KEY` و `ADMIN_PASSWORD` — لا تتركها الافتراضية.
-
-**5.** اضغط **Deploy the stack** وانتظر 30–60 ثانية.
-
-**6.** بعد النشر الناجح يظهر Status: **running** ✅
-
-افتح التطبيق على: `http://SERVER_IP:8000`
-
----
-
-### الخطوة 3 — أول دخول
-
-افتح `http://SERVER_IP:8000` في المتصفح.
-
-- **اسم المستخدم:** `admin`
-- **كلمة المرور:** (ما أدخلته في `ADMIN_PASSWORD`)
-
-بعد الدخول روح **المستخدمون** من القائمة وأنشئ حسابات إضافية إذا لزم.
-
----
-
-### الخطوة 4 — تحديث التطبيق لاحقاً
-
-عند صدور تحديث جديد على GitHub:
-
-1. Portainer → **Stacks** → **ejar-pro**
-2. اضغط **Pull and redeploy**
-3. أكّد بـ **Update**
-
-البيانات محفوظة في الـ volume ولن تُمسح. ✅
-
----
-
-## الطريقة 2 — Docker Compose مباشرة
+## Docker Compose
 
 ```bash
 git clone https://github.com/ThamerLab/ejar-pro.git
 cd ejar-pro
-cp .env.example .env
-nano .env          # غيّر SECRET_KEY و ADMIN_PASSWORD
-docker compose up -d
-docker compose logs -f
+cp env.example .env
+python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+# Edit .env: put a unique value in SECRET_KEY and strong ADMIN_PASSWORD
+docker compose config
+docker compose up -d --build
+docker compose ps
 ```
 
-التطبيق يعمل على: `http://localhost:8000`
+Default address on the Docker host: **http://127.0.0.1:9090**. `BIND_IP=127.0.0.1` prevents direct LAN exposure. To access via reverse proxy, route to the host loopback listener where supported. To access from LAN, bind to a trusted network interface explicitly, and restrict it by firewall.
 
----
+`SECRET_KEY` must be at least 32 characters and cannot be a placeholder. `ADMIN_PASSWORD` must be at least 14 characters on a **fresh database**, and cannot be a known default. The environment variables are required for Compose. On an existing database, changing `ADMIN_PASSWORD` does **not** reset the existing account.
 
-## متغيرات البيئة
+For HTTPS deployments, set `SECURE_COOKIES=true` and make sure that the browser exclusively connects over HTTPS.
 
-| المتغير | الوصف | الافتراضي |
-|---------|-------|-----------|
-| `SECRET_KEY` | مفتاح تشفير الـ session — **غيّره دائماً** | `change-this...` |
-| `ADMIN_USERNAME` | اسم المدير عند أول تشغيل | `admin` |
-| `ADMIN_PASSWORD` | كلمة مرور المدير — **غيّرها دائماً** | `admin123` |
-| `DB_PATH` | مسار ملف SQLite داخل الحاوية | `/data/ejar.db` |
+## Portainer Git Stack
 
----
+1. In Portainer, select **Stacks → Add stack → Repository**.
+2. Use URL `https://github.com/ThamerLab/ejar-pro`, branch `main`, and Compose path `docker-compose.yml`.
+3. Supply `SECRET_KEY`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `APP_PORT`, `BIND_IP`, and `SECURE_COOKIES` as appropriate.
+4. Ensure your Portainer/Docker environment supports the `build: .` context from this Git repository. Otherwise, build the image separately and adjust the stack.
+5. Deploy and check the container logs and application page.
 
-## النسخ الاحتياطي
+## Backup / restore
 
-**من داخل التطبيق:**
-القائمة الجانبية ← ⬇️ تصدير البيانات (JSON)
+SQLite database: `/data/ejar.db` inside the container; Docker volume: `ejar_data` under the Compose project namespace. The actual volume name may be prefixed by the stack name.
 
-**من الخادم مباشرة:**
+Before upgrading, create a consistent backup. Use SQLite's backup API or stop the application before copying the DB from the volume. Do not assume `docker cp` of a live database is consistent. Keep backups encrypted, and do not store sensitive tenant records in Git.
+
+Before restoring, stop application writes, retain an additional copy of the existing data, restore the SQLite backup and verify the application using the **same `SECRET_KEY`** if preserving session compatibility matters.
+
+## Logs and troubleshooting
+
 ```bash
-docker cp ejar-pro:/data/ejar.db ./ejar_backup_$(date +%Y%m%d).db
+docker compose ps
+docker compose logs --tail=100 ejar-pro
+docker compose config
 ```
 
-**استعادة:**
-```bash
-docker cp ./ejar_backup_YYYYMMDD.db ejar-pro:/data/ejar.db
-docker restart ejar-pro
-```
+- Missing SECRET_KEY or ADMIN_PASSWORD: edit the local `.env` or Portainer stack environment. Placeholders are intentionally rejected.
+- Browser connection refused: inspect `BIND_IP`, `APP_PORT`, reverse proxy, and firewall. Default is port **9090**, bound only to localhost.
+- Login rejected after an update: stored user password hashes are not replaced by changing `.env`.
+- Data seems missing: check the expected Compose stack name and persisted Docker volume before starting a fresh instance.
 
----
+## Operational limits
 
-## استكشاف الأخطاء
-
-| المشكلة | الحل |
-|---------|------|
-| الصفحة لا تفتح | `docker logs ejar-pro` |
-| خطأ في تسجيل الدخول | تأكد من `ADMIN_PASSWORD` في المتغيرات |
-| البيانات اختفت | `docker volume ls` — تأكد أن `ejar_data` موجود |
-| المنفذ 8000 مشغول | غيّر `"8000:8000"` لـ `"8080:8000"` في docker-compose.yml |
+The backend uses SQLite and initializes demo content on a fresh installation. Review and remove demonstration entries before entering real business records. Manual migrations, input validation, role enforcement, CSRF, financial atomicity and recovery should be assessed before production.
