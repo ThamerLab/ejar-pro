@@ -6,7 +6,9 @@ from .database import get_db
 from .models import User
 import os
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "ejar-pro-secret-change-in-production")
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
+if len(SECRET_KEY) < 32 or SECRET_KEY.startswith(("change-", "ejar-pro-secret-")):
+    raise RuntimeError("Set a unique SECRET_KEY of at least 32 characters.")
 SESSION_MAX_AGE = 60 * 60 * 24 * 7   # 7 days
 
 serializer = URLSafeTimedSerializer(SECRET_KEY)
