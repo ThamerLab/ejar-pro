@@ -1,0 +1,40 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python syntax
+        run: python -m compileall -q backend
+      - name: Deployment and security regression checks
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          compose=Path('docker-compose.yml').read_text()
+          dockerfile=Path('Dockerfile').read_text()
+          auth=Path('backend/auth.py').read_text()
+          seed=Path('backend/seed.py').read_text()
+          assert 'ADMIN_PASSWORD=' in compose and ':?Set a unique ADMIN_PASSWORD' in compose
+          assert 'SECRET_KEY=' in compose and ':?Set a strong random SECRET_KEY' in compose
+          assert '127.0.0.1' in compose
+          assert 'ADMIN_PASSWORD=admin123' not in dockerfile
+          assert 'SECRET_KEY=change-' not in dockerfile
+          assert 'raise RuntimeError' in auth
+          assert 'len(admin_pass) < 14' in seed
+          assert '.env' in Path('.gitignore').read_text()
+          print('Security configuration invariants passed')
+          PY
+      - name: Compose configuration with explicit test-only secrets
+        run: |
+          export SECRET_KEY=this-is-a-local-test-only-secret-string-of-50-characters
+          export ADMIN_PASSWORD=this-is-a-test-only-password
+          docker compose config --quiet
