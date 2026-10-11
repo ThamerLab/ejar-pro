@@ -12,9 +12,8 @@ COPY frontend/ ./frontend/
 RUN mkdir -p /app/frontend/static /data
 
 ENV DB_PATH=/data/ejar.db
-ENV SECRET_KEY=change-this-secret-in-production
-ENV ADMIN_USERNAME=admin
-ENV ADMIN_PASSWORD=admin123
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 EXPOSE 8000
 
