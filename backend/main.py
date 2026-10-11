@@ -156,6 +156,7 @@ async def login(
         max_age=SESSION_MAX_AGE,
         httponly=True,
         samesite="lax",
+        secure=os.environ.get("SECURE_COOKIES", "false").lower() == "true",
     )
     return {"ok": True, "role": user.role, "full_name": user.full_name}
 
