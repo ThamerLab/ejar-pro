@@ -75,8 +75,10 @@ DEFAULT_TELEGRAM = {
 def seed(db: Session):
     # ---- Admin user ----
     admin_user = os.environ.get("ADMIN_USERNAME", "admin")
-    admin_pass = os.environ.get("ADMIN_PASSWORD", "admin123")
+    admin_pass = os.environ.get("ADMIN_PASSWORD", "")
     if not db.query(User).first():
+        if len(admin_pass) < 14 or admin_pass in {"admin123", "password", "Admin@123456"}:
+            raise RuntimeError("Set a unique ADMIN_PASSWORD of at least 14 characters before first startup.")
         db.add(User(
             username=admin_user,
             full_name="المدير",
